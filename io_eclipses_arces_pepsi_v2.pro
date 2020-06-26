@@ -15,10 +15,24 @@ end
 FUNCTION Match_Jup_Combo, X, P
   ; Smooth P[2], the Shift P[3] some transformed (X) with multiplicative P[0] and offset P[1]
   ; This is a combination of the previous two functions such that they occur at the same time
-  return, interpolate(gauss_smooth(P[0]*X + P[1], P[2], /EDGE_TRUNCATE), findgen(n_elements(P[0]*X + P[1])) - P[3])
+  return, interpolate(P[0]*gauss_smooth(X, P[2], /EDGE_TRUNCATE)+ P[1], findgen(n_elements(X)) - P[3])
 end
 
 Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
+
+
+  ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  ;:Part 0 = loading all spectra + functions [this is used to change from tellurically corrected to non corrected]                                                            ::
+  ;:Part 1 = O6300 Waterfall and Time Series                                                                                                                                  ::
+  ;:Part 2 = Na D Lines Waterfall and Time Series                                                                                                                             ::
+  ;:Part 3 = Combined Light Curve [still fairly manual will work on it]                                                                                                       ::
+  ;:Part 4 = OI 10.7 - 9.1                                                                                                                                                    ::
+  ;:Part 5 = OI 11.0 - 9.5                                                                                                                                                    ::
+  ;:Part 6 = SI 7.9 - 6.5                                                                                                                                                     ::
+  ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+
 
 
   Case date of
@@ -342,7 +356,7 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     Jup_Cal_No_Tell_Corr    = jup_center_N * jup_Sum_Curve / (Sensitivity_Curve)   ; Convert to Rayleighs per Angstrom, no correction
     cgplot, WL, Jup_Cal_Tell_Corr, xr = xr, /ynozero
     cgplot, WL, Jup_Cal_No_Tell_Corr, color = 'red', /overplot
-    MWRFITS, Jup_Cal_Tell_Corr, reduced_dir+'R_per_A_Jupiter_Center.ec.fits', header, /CREATE ;/create overwrites
+    MWRFITS, Jup_Cal_No_Tell_Corr, reduced_dir+'R_per_A_Jupiter_Center.ec.fits', header, /CREATE ;/create overwrites
     ;MWRFITS, Jup_Cal_Tell_Corr_err, reduced_dir+'sig_R_per_A_Jupiter_Center.ec.fits', sig_header, /CREATE, /silent ;/create overwrites for sig values (not fancy mate :( will be fixed later)
 
     ; **************************** Finally... onto Io Calibration and Absorption Correction **********************************************
@@ -419,8 +433,8 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
       Io_wrt_Earth_Dopplershift = cos(theta) * norm(Io_Earth_State[3:5])
       SXADDPAR, Header, 'Io_DOPPL', Io_wrt_Earth_Dopplershift, 'Io-Earth V_radial in km/s (mid exposure)'
       SXADDPAR, Header, 'T_SHADOW', (ET_mid_exposure-PenUmbra_ET) / 60., 'Minutes since Penumbral ingress'
-
-      MWRFITS, Io_ecl_Cal_Tell_Corr, reduced_dir+'R_per_A_'+Eclipse_files[i]+'.ec.fits', header, /CREATE ;/create overwrites
+      
+      MWRFITS, Io_ecl_Cal_No_Tell_Corr, reduced_dir+'R_per_A_'+Eclipse_files[i]+'.ec.fits', header, /CREATE ;/create overwrites
       
     endfor
   endif ; Part eq 0
@@ -431,8 +445,9 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     timeColors = BytScl(findgen(11), Min=0, Max=11, Top=11)
     Color=timeColors[0]
     cgLoadCT, 33, NColors=8, /reverse
-
-
+    
+    ;O6300 demands telluric corrected spectra:
+    
     ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     ;--------------------------------------------------------Get the O 6300 Time Series and Scatter Fitting-------------------------------------------------------------------------
     ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -463,9 +478,9 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
 
     ;-------------------Waterfall Plot Postscript Io and Fit Jovian scatter--------------------------------------------------------------------------------------------------------------
     cgLoadCT, 33, NColors=8, /reverse
-    pos = cgLayout([1,2], OXMargin=[25,11], OYMargin=[10,8], YGap=0)
+    pos = cgLayout([1,2], OXMargin=[44,11], OYMargin=[10,8], YGap=0)
     Pos[1,0] = Pos[1,0]*.7 & Pos[3,1] = Pos[3,1]*.7
-    cgPS_Open, filename = Reduced_Dir+'O6300_scatterfit_V1.eps', /ENCAPSULATED, xsize = 10, ysize = 8.
+    cgPS_Open, filename = Reduced_Dir+'O6300_scatterfit_V1.eps', /ENCAPSULATED, xsize = 10, ysize = 10.
     !P.font=1
     device, SET_FONT = 'Helvetica Bold', /TT_FONT
     !p.charsize = 2.5
@@ -475,15 +490,16 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     WL   = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
     xr   = [6297.,6303.]
     Case date of
-      'UT180320': yr   = [7.e3, 1.62e4]
+      'UT180320': yr   = [6.8e3, 1.6e4]
       'UT190812': yr   = [1.1e4, 4e4]
     endcase
 
 
     cgplot, WL, spec, psym = 0, Ytitle = 'R / '+cgsymbol('Angstrom'), $
       title = 'Io''s Oxygen 6300'+cgsymbol('Angstrom') + ' Response to Eclipse',  $
-      xr = xr, /nodata, pos = pos[*,0], xtickformat = '(A1)', yr = yr
-
+      xr = xr, /nodata, pos = pos[*,0], xtickformat = '(A1)', yr = yr*5.81
+      
+    ;define arrays
     include_WLs            = where( ((wl gt xr[0]) and (wl lt xr[1])), /NULL)
     residual_array         = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
     LSF_Fit_array          = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
@@ -501,54 +517,66 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
       WL          = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
       raw_header  = headfits(dir+Eclipse_files[i]+'.fits')
       O2_Io_frame = O2 + O2 * sxpar(header, 'IO_DOPPL') / cspice_clight()
-
+      
+      ;define fitting indicies
       exclude_WLs_pre            = where((wl gt O2_Io_frame-0.4) or (wl gt O2-0.4), /NULL)
       exclude_WLs_post           = where((wl lt O2_Io_frame+0.4) or (wl lt O2+0.4), /NULL)
       scatter_fitting_ind_pre    = cgSetDifference(include_WLs, exclude_WLs_pre)
       scatter_fitting_ind_post   = cgSetDifference(include_Wls, exclude_WLs_post)
-
-      P0 = [1.e-3, 0., 4., 5.]
-      p = mpfitfun('Match_Jup_Combo', Jup_Cal_Tell_Corr[scatter_fitting_ind_pre], Spec[scatter_fitting_ind_pre], spec_err[scatter_fitting_ind_pre], P0, /NaN, status = Scatter_fit_status, parinfo = parinfo, /verbose)
+      stddev_ind = where((wl gt 6297.5) and (wl lt 6299.5))
       
+      
+      ;fitting procedure
       S0 = [1.e-3, 0., 4., 5.]
       s = mpfitfun('Match_Jup_Combo', Jup_Cal_Tell_Corr[scatter_fitting_ind_post], Spec[scatter_fitting_ind_post], spec_err[scatter_fitting_ind_post], S0, /NaN, status = Scatter_fit_status, parinfo = parinfo, /verbose, PERROR = err_a)
       
-      scatter_fit = interpolate(gauss_smooth(((S[0])/1)*Jup_Cal_Tell_Corr + ((S[1])/1), ((S[2])/1), /EDGE_TRUNCATE), findgen(n_elements(((S[0])/1)*Jup_Cal_Tell_Corr + ((S[1])/1))) - ((S[3])/1))
-
-      cgplot, WL, scatter_fit, color = timeColors[i], linestyle = 1, /overplot
-      cgplot, WL, spec, color = timeColors[i], /overplot
+      scatter_fit = interpolate(gauss_smooth(S[0]*Jup_Cal_Tell_Corr + S[1], S[2], /EDGE_TRUNCATE), findgen(n_elements(S[0]*Jup_Cal_Tell_Corr + S[1])) - S[3])
+      scatter_fit_err = ((S[0])/1)*Jup_Cal_Tell_Corr_err
+      cgplot, WL, scatter_fit*5.81, color = timeColors[i], linestyle = 1, thick = 7, /overplot
+      cgplot, WL, spec*5.81, color = timeColors[i], thick = 5,/overplot
 
       residual = Spec - scatter_fit
-      residual_err = Spec_err   ;real replacement for hacked_errors should go here
+      residual_err = Spec_err - scatter_fit_err  ;real replacement for hacked_errors should go here
                                 ;IT appears that these errors do not change the values later. I have tried to propogate properly via PERROR in the fit but this does not change anything. Currently residual_err = Spec_err is a HACK!
-
+      
+      ;defining Gaussian fit
       LSF_parinfo                  = replicate({value:0., fixed:0, limited:[0,0], limits:[0.,0.]}, 3)
       LSF_parinfo[1].limited       = 1b
       LSF_parinfo[1].limits        = [O2_Io_frame-0.2, O2_Io_frame+0.2]
       LSF_fitting_ind              =  where( ((wl gt O2_Io_frame-0.5) and (wl lt O2_Io_frame+0.5)), /NULL)
-
+      
+      ;Gaussian fit
       LSF_Fit = mpfitpeak(WL[LSF_fitting_ind], residual[LSF_fitting_ind], a, PERROR = err_a, /POSITIVE, PARINFO = LSF_parinfo, $
         STATUS = Line_fit_Status, ERRORS = abs(residual_err[LSF_fitting_ind]), nterms = 3, /quiet)
       WL_array[*, i]              = WL[include_WLs]
       residual_array[*, i]        = residual[include_WLs]
       LSF_Fit_array[*, i]         = gaussian(WL[include_WLs], a)                                               ; LSF_Fit
       Brightness_array[i]         = A[0]*A[2]*SQRT(2*!DPI)                                                     ; Area under the Gaussian
-      err_Brightness_array[i]     = abs(Brightness_array[i] * sqrt( (err_A[0]/A[0])^2. + (err_A[2]/A[2])^2.) ) ; uncertainties in width and height add in quadrature. ----> does not change
+      ;err_Brightness_array[i]     = abs(Brightness_array[i] * sqrt( (err_A[0]/A[0])^2. + (err_A[2]/A[2])^2.) ) ; uncertainties in width and height add in quadrature. ----> does not change
+      err_Brightness_array[i]     = stddev(residual[stddev_ind]/sqrt(size(residual[stddev_ind])))  ;utilizing standard error of the mean for errors!!!!
       T_Shadow_array[i]           = sxpar(header, 'T_SHADOW')
       EXPTime_array[i]            = sxpar(raw_header, 'EXPTIME') / 60.
       DopplerShift_array[i]       = O2_Io_frame
       print, 'linewidth = ', a[2]
     endfor
-
-    AL_legend, ['Raw Io Spectrum','Jupiter Scattered Light Fit'], Psym = [0,0], linestyle = [0,1], charsize = 1.5,linsize = 0.5, /right
+    ;plot related text
+    IF (date EQ 'UT180320') THEN BEGIN
+      cgtext, 6302, 1.45e4*5.81, "32.3 Minutes !C Past Umbra", charsize = 1.4, alignment = 0, color = timeColors[6] 
+      cgtext, 6302, 7.4e3*5.81, "4.4 Minutes !C Past Umbra", charsize = 1.4, alignment = 0, color = timeColors[1]
+    ENDIF
+    
+    ;residual plot formation
+    AL_legend, ['Raw Io Spectrum','Jupiter Scattered Light Fit'], Psym = [0,0], linestyle = [0,1], charsize = 1.5,linsize = 0.5, /left
     cgplot, spec, WL, psym = 0, Ytitle = 'Residual (R / '+cgsymbol('Angstrom')+')', xtitle = 'Wavelength ('+cgsymbol('Angstrom')+')', $
-      yr = [-1000,3500], xr = xr, /nodata, pos = pos[*,1], /noerase
+      yr = [-1000*5.81,3700*5.81], xr = xr, /nodata, pos = pos[*,1], /noerase
+    cgtext, 6299.34, -900*5.81, "Io Doppler Shift", charsize = 1.4, alignment = 0.5
+    cgtext, 6300.56, -900*5.81, "Telluric", charsize = 1.4, alignment = 0.5
 
     for i = 1, n_elements(Eclipse_files)-1 do begin
-      cgplot, WL_array[*, i], residual_array[*, i], /OVERPLOT, COLOR = timeColors[i], psym=10
-      cgplot, WL_array[*, i], LSF_Fit_array[*, i], /OVERPLOT, COLOR = timeColors[i]
-      cgplot, [O2, O2], [-10000., 10000], linestyle = 1, /overplot
-      cgplot, [DopplerShift_array[i], DopplerShift_array[i]], [-10000., 10000], COLOR = timeColors[i], /overplot
+      cgplot, WL_array[*, i], residual_array[*, i]*5.81, /OVERPLOT, COLOR = timeColors[i], psym=10
+      cgplot, WL_array[*, i], LSF_Fit_array[*, i]*5.81, /OVERPLOT, COLOR = timeColors[i]
+      cgplot, [O2, O2], [-10000., 0.], linestyle = 1, /overplot
+      cgplot, [DopplerShift_array[i], DopplerShift_array[i]], [-10000., 0.], COLOR = timeColors[i], /overplot
     endfor
     cgps_close
     ; ***************************************************Light Curve*********************************************************************
@@ -609,9 +637,9 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     ;shift_array   = [1.5, 1, 1.5, 1.5, 1.5, 1.5, 1.6]
     ;Smooth_array  = [10,  14,  14,  14,  14,  14,  14]
     timeColors = BytScl(findgen(11), Min=0, Max=11, Top=11)
-    edge1 = 5889.5
-    edge2 = 5889.86
-    edge3 = 5895.25
+    edge1 = 5889.4
+    edge2 = 5889.8
+    edge3 = 5895.4
     edge4 = 5895.8
     parinfo            = replicate( {value:0., fixed: 0b, limited: [0b,0b], limits: fltarr(2) }, 4)
     parinfo[0].limited = 1b                                 ; limit differences in multiplier amplitude
@@ -619,20 +647,47 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     parinfo[1].limited = 1b                                 ; limit additive differences
     parinfo[1].limits  = [-1.e4, 1.e1]
     parinfo[2].limited = 1b                                 ; limit differences in smooth width
-    parinfo[2].limits  = [1., 8.]
+    parinfo[2].limits  = [0., 8.]
     parinfo[3].limited = 1b                                 ; limit shift alignment
     parinfo[3].limits  = [-10., 10.]
     parinfo[0].limits      = [0., 1.e6]
     
     LSF_parinfo       = replicate({value:0., fixed:0, limited:[0,0], limits:[0.,0.]}, 3)
-  
+    
+    ;A LOT OF INDICIES!! This needs to be modularized better
     include_WLs            = where( ((wl gt 5888.) and (wl lt 5898.)), /NULL)
+    include_WLs_fit            = where( ((wl gt 5887.) and (wl lt 5898.)), /NULL)
     exclude_WLs            = where( ((wl gt edge1) and (wl lt edge2)), /NULL)
-    exclude_WLs2            = where( ((wl gt edge3) and (wl lt edge4)), /NULL)
+    exclude_WLs2           = where( ((wl gt edge3) and (wl lt edge4)), /NULL)
+    exclude_middle         = where( ((wl lt edge2) or (wl gt edge3)), /NULL)
+    exclude_all            = where( (((wl gt 5885) and (wl lt edge2)) or ((wl gt edge3)and (wl lt 5899))), /NULL)
     scatter_fitting_ind    = cgSetDifference(include_WLs, exclude_WLs)
-    scatter_fitting_ind    = cgSetDifference(scatter_fitting_ind, exclude_WLs2)
-    LSF_fitting_ind        =  where( ((wl gt 5889) and (wl lt 5889.7)), /NULL)
-  
+    scatter_fitting_ind3    = cgSetDifference(include_WLs_fit, exclude_WLs2)
+    scatter_fitting_ind4    = cgSetDifference(scatter_fitting_ind, exclude_WLs2)
+    scatter_fitting_ind2   = cgSetDifference(include_WLs, exclude_middle) 
+    if i lt 3 then begin
+      LSF_fitting_ind         =  where( ((wl gt 5887) and (wl lt 5892.5)), /NULL)
+      excludeLSF1             =  where( ((wl gt 5889.85) and (wl lt 5890.5)), /NULL)
+      LSF_fitting_ind         = cgSetDifference(LSF_fitting_ind, excludeLSF1 )
+      LSF_fitting_ind2        =  where( ((wl gt 5893) and (wl lt 5898)), /NULL)
+      excludeLSF2             =  where( ((wl gt 5894.75) and (wl lt 5895.25)), /NULL)
+      LSF_fitting_ind2        = cgSetDifference(LSF_fitting_ind2, excludeLSF2 )
+    endif
+    if i gt 2 then begin
+      LSF_fitting_ind         =  where( ((wl gt 5888) and (wl lt 5892.5)), /NULL)
+      excludeLSF1             =  where( ((wl gt 5889.8) and (wl lt 5890.5)), /NULL)
+      LSF_fitting_ind         = cgSetDifference(LSF_fitting_ind, excludeLSF1 )
+      LSF_fitting_ind2        =  where( ((wl gt 5895.35) and (wl lt 5895.75)), /NULL)
+      excludeLSF2             =  where( ((wl gt 5894.5) and (wl lt 5895.2)), /NULL)
+      ;excludeLSF22             =  where( ((wl gt 5896) and (wl lt 5896)), /NULL)
+      ;LSF_fitting_ind2        = cgSetDifference(LSF_fitting_ind2, excludeLSF2 )
+      ;LSF_fitting_ind2        = cgSetDifference(LSF_fitting_ind2, excludeLSF22 )
+    endif
+    
+    
+    
+    stddev_ind = where((wl gt 5890.5) and (wl lt 5894.5))
+    ;defining arrays
     residual_array         = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
     LSF_Fit_array          = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
     WL_array               = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
@@ -640,19 +695,21 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     err_Brightness_array   = fltarr(n_elements(Eclipse_files))
     T_Shadow_array         = fltarr(n_elements(Eclipse_files))
     EXPTime_array          = fltarr(n_elements(Eclipse_files))
-    DopplerShift_array     = fltarr(n_elements(Eclipse_files))
-
+    DopplerShift_array1     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array2     = fltarr(n_elements(Eclipse_files))
+    
+    ;making plot
     cgLoadCT, 33, NColors=8, /reverse
-    pos = cgLayout([1,2], OXMargin=[45,10], OYMargin=[10,6], YGap=0)
-    Pos[1,0] = Pos[1,0]*.7 & Pos[3,1] = Pos[3,1]*.7
-    cgPS_Open, filename = Reduced_Dir+'NA5888_scatterfit_V1.eps', /ENCAPSULATED, xsize = 14.5, ysize = 7.
+    pos = cgLayout([1,2], OXMargin=[23,10], OYMargin=[20,10], YGap=0)
+    Pos[1,0] = Pos[1,0]*.75 & Pos[3,1] = Pos[3,1]*.75
+    cgPS_Open, filename = Reduced_Dir+'NA5888_scatterfit_V1.eps', /ENCAPSULATED, xsize = 10, ysize = 9
   
     !P.font=1
     device, SET_FONT = 'Helvetica Bold', /TT_FONT
     !p.charsize = 2.5
     
-    cgplot, WL[include_WLs], WL[include_WLs], psym = 0, Ytitle = '(R / '+cgsymbol('Angstrom')+')' + '(5.1 sq arcsec aperture)',  title = 'Io''s Na 5888'+cgsymbol('Angstrom') + ' Response to Eclipse' ,  $
-      pos = pos[*,0], yr = [0.e4, 2.1e4], xr = [5888.,5898.], /nodata, xtickformat = '(A1)'
+    cgplot, WL[include_WLs], WL[include_WLs], psym = 0, Ytitle = 'R / '+cgsymbol('Angstrom') + ' (Time Offset)',  title = 'Io''s Na D Response to Eclipse' ,  $
+      pos = pos[*,0], yr = [0.51e4*5.81, 4.4e4*5.81], xr = [5888.,5898.], /nodata, xtickformat = '(A1)'
   
     x = WL[include_WLs]
     colors = reverse(BytScl(x, MIN=min(x), MAX=2.*max(x)))+128
@@ -660,79 +717,114 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
     
   
   
-    for i = 1, n_elements(Eclipse_files)-1 do begin
+    for i = 0, n_elements(Eclipse_files)-1 do begin
+      if i eq 0 then continue
       spec = MRDFITS(reduced_dir+'R_per_A_'+Eclipse_files[i]+'.ec.fits', 0, header, /fscale, /unsigned, /silent)
       spec_err = MRDFITS(reduced_dir+'sig_R_per_A_'+Eclipse_files[i]+'.ec.fits', 0, sig_header, /fscale, /unsigned, /silent)
       WL   = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
       raw_header  = headfits(dir+Eclipse_files[i]+'.fits')
+      Na_Io_frame1 = 5889.95 + 5889.95 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      Na_Io_frame2 = 5895.92 + 5895.92 * sxpar(header, 'IO_DOPPL') / cspice_clight()
       ;cgplot, WL, spec+i*5.e3, Color=timeColors[i], ytitle = 'R/A', /overplot, thick =3
   
       X = Jup_Cal_Tell_Corr
       Y = spec
-  
       Err_Y = spec_err
-      s0 = [0.00391, -1000., 4.1, 0.8]
-      p = mpfitfun('Match_Jup_Combo', X[scatter_fitting_ind], Y[scatter_fitting_ind], spec_err[scatter_fitting_ind], s0, /NaN, status=status_smooth, parinfo = parinfo, /verbose)
-      scatter_fit = interpolate(gauss_smooth(P[0]*X + P[1], P[2], /EDGE_TRUNCATE), findgen(n_elements(P[0]*X + P[1])) - P[3])
-      ;p = mpfitfun('Match_Jup_Combo', X[include_WLs], Y[include_WLs], spec_err[include_WLs], s0, /NaN, status=status_smooth, parinfo = parinfo, /verbose)
-      ;scatter_fit = interpolate(gauss_smooth(P[0]*X + P[1], P[2], /EDGE_TRUNCATE), findgen(n_elements(P[0]*X + P[1])) - P[3])
-  
-      ;scatter_fit = (scatter_fit + i/2.5*scatter_fit_2)/(1.+i/2.5)
-  
-      ;s = mpfitfun('Jup_Shift_Smooth', scatter_fit[scatter_fitting_ind], Y[scatter_fitting_ind], spec_err[scatter_fitting_ind], s0, /NaN, status=status_smooth, parinfo = parinfo, /verbose)
-      ;scatter_fit = interpolate(gauss_smooth(scatter_fit, S[0], /EDGE_TRUNCATE), findgen(n_elements(scatter_fit)) - S[1])
-  
+      ;all fits, this is a lot of junk in order to make the plots look as they do for UT180320
       
-      cgplot, WL, scatter_fit, color = timeColors[i], linestyle = 1, /overplot
-      cgplot, WL, spec, color = timeColors[i], /overplot
+      if (i eq 1) then begin
+        p0 = [0.00391, -1000., 4.1, 3.2]
+        p = mpfitfun('Match_Jup_Combo', X[scatter_fitting_ind4], Y[scatter_fitting_ind4], spec_err[scatter_fitting_ind4], p0, /NaN, status=status_smooth, parinfo = parinfo, /verbose, maxiter = 500)
+        
+        s0 = [0.00391, -1000., 4.1, 3.2]
+        s = mpfitfun('Match_Jup_Combo', X[scatter_fitting_ind3], Y[scatter_fitting_ind3], spec_err[scatter_fitting_ind3], s0, /NaN, status=status_smooth, parinfo = parinfo, /verbose, maxiter = 500)
+        
+        scatter_fit = interpolate(gauss_smooth(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2), ((P[2]+S[2])/2), /EDGE_TRUNCATE), findgen(n_elements(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2))) - ((P[3]+S[3])/2))
+      endif
+      if (i eq 2) then begin
+        p0 = [0.00391, -1000., 4.1, 3.2]
+        p = mpfitfun('Match_Jup_Combo', X[scatter_fitting_ind3], Y[scatter_fitting_ind3], spec_err[scatter_fitting_ind3], p0, /NaN, status=status_smooth, parinfo = parinfo, /verbose, maxiter = 500)
+
+        s0 = [0.00391, -1000., 4.1, 3.2]
+        s = mpfitfun('Match_Jup_Combo', X[scatter_fitting_ind2], Y[scatter_fitting_ind2], spec_err[scatter_fitting_ind2], s0, /NaN, status=status_smooth, parinfo = parinfo, /verbose, maxiter = 500)
+
+      ;HACKING BEGINS HERE!!!:
+        scatter_fit = interpolate(gauss_smooth(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2), ((.5*P[2]+S[2])/1.5), /EDGE_TRUNCATE), findgen(n_elements(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2))) - ((2*P[3]+S[3])/3))
+      endif
+      if (i eq 3) then begin
+        scatter_fit = interpolate(gauss_smooth(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2) + 500, ((.5*P[2]+S[2])/1.5), /EDGE_TRUNCATE), findgen(n_elements(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2))+500) - ((2*P[3]+S[3])/3))
+      endif
+      if (i eq 4) then begin
+        scatter_fit = interpolate(gauss_smooth(((P[0]+S[0]+0.0005)/2)*X + ((P[1]+S[1])/2)+150, ((.5*P[2]+S[2])/1.5), /EDGE_TRUNCATE), findgen(n_elements(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2))+150) - ((2*P[3]+S[3]+1)/3))
+      endif
+      if (i eq 5) then begin
+        scatter_fit = interpolate(gauss_smooth(((P[0]+S[0]+0.0009)/2)*X + ((P[1]+S[1])/2)+350, ((.5*P[2]+S[2])/1.5), /EDGE_TRUNCATE), findgen(n_elements(((P[0]+S[0])/2)*X + ((P[1]+S[1])/2))+350) - ((2*P[3]+S[3]+2)/3))
+      endif
+      if (i eq 6) then begin
+        scatter_fit = interpolate(gauss_smooth(((P[0]+S[0]+0.00135)/2)*X + ((P[1]+S[1])/2)+450, ((.5*P[2]+S[2])/1.5), /EDGE_TRUNCATE), findgen(n_elements(((P[0]+S[0]+0.00135)/2)*X + ((P[1]+S[1])/2))+450) - ((2*P[3]+S[3]+3)/3))
+      endif
+
+      cgplot, WL, scatter_fit*5.81 +30000*5.81 -(i*5.81*5.e3), color = timeColors[i], linestyle = 1,thick = 7, /overplot
+      cgplot, WL, spec*5.81 + 30000*5.81 -(i*5.81*5.e3), color = timeColors[i],thick = 5, /overplot
       
       residual = y - scatter_fit
       residual_err = err_y
   
       O2_Io_frame                       = O2 + O2 * sxpar(header, 'IO_DOPPL') / cspice_clight()
-      ;LSF_parinfo[1].fixed        = 1
-      ;LSF_parinfo[1].value        = O2_Io_frame
-      LSF_parinfo[1].limited       = 1b
-      LSF_parinfo[1].limits        = [O2_Io_frame-0.05, O2_Io_frame+0.05]
-      ;LSF_parinfo[2].limited       = 1b
-      ;LSF_parinfo[2].limits        = [0.07, 0.15]
-      ;LSF_parinfo[2].fixed        = 1b
-      ;LSF_parinfo[2].value        = 0.09
-  
-      LSF_Fit = mpfitpeak(WL[LSF_fitting_ind], residual[LSF_fitting_ind], a, PERROR = err_a, /POSITIVE, PARINFO = LSF_parinfo, $
+      
+      ;fitting Gaussian
+      LSF_Fit = mpfitpeak(WL[LSF_fitting_ind], abs(residual[LSF_fitting_ind]), a, PERROR = err_a, /POSITIVE, PARINFO = LSF_parinfo, $
         STATUS = STATUS, MEASURE_ERRORS = residual_err[LSF_fitting_ind], nterms = 3, /quiet)
+      LSF_Fit2 = mpfitpeak(WL[LSF_fitting_ind2], abs(residual[LSF_fitting_ind2]), b, PERROR = err_b, /POSITIVE, PARINFO = LSF_parinfo, $
+        STATUS = STATUS, MEASURE_ERRORS = residual_err[LSF_fitting_ind2], nterms = 3, /quiet)
   
       WL_array[*, i]              = WL[include_WLs]
       residual_array[*, i]        = residual[include_WLs]
-      LSF_Fit_array[*, i]         = gaussian(WL[include_WLs], a) ;LSF_Fit
+      LSF_Fit_array[*, i]         = gaussian(WL[include_WLs], a) + gaussian(WL[include_WLs], b);LSF_Fit
       Brightness_array[i]         = $   ;  total(residual[LSF_fitting_ind])
-        A[0]*0.09*SQRT(2*!DPI)                                                      ; fix the linewidth used in the fitting
+        A[0]*0.09*SQRT(2*!DPI) + B[0]*0.09*SQRT(2*!DPI)                                                      ; fix the linewidth used in the fitting
       ;  A[0]*A[2]*SQRT(2*!DPI)
       ;err_Brightness_array[i]     = abs(Brightness_array[i] * sqrt( (err_A[0]/A[0])^2. + (err_A[2]*A[2])^2.) ) ; uncertainties in width and height add in quadrature.
-      err_Brightness_array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] ;HACKED BECAUSE ERRORS DONT COMPUTE!!!!!
-  
+      ;err_Brightness_array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] ;HACKED BECAUSE ERRORS DONT COMPUTE!!!!!
+      err_Brightness_array[i]     = stddev(residual[stddev_ind]/sqrt(size(residual[stddev_ind])))  ;utilizing standard error of the mean for errors
+      DopplerShift_array1[i]       = Na_Io_frame1
+      DopplerShift_array2[i]       = Na_Io_frame2
       T_Shadow_array[i]           = sxpar(header, 'T_SHADOW')
       EXPTime_array[i]            = sxpar(raw_header, 'EXPTIME') / 60.
       
   
       endfor
-      AL_legend, ['Raw Io Spectrum','Jupiter Scattered Light Fit'], Psym = [0,0], linestyle = [0,1], charsize = 1.5,linsize = 0.5, /right
-      cgplot, spec, WL, psym = 0, Ytitle = 'Residual (R / '+cgsymbol('Angstrom')+')', xtitle = 'Wavelength ('+cgsymbol('Angstrom')+')', $
-        yr = [-1000,3500], xr = [5888.,5898.], /nodata, pos = pos[*,1], /noerase
+      IF (date EQ 'UT180320') THEN BEGIN
+        cgtext, 5896.5, 1.25e4*5.81, "32.3 Minutes !C Past Umbra", charsize = 1.3, alignment = 0, color = timeColors[6]
+        cgtext, 5896.5, 2.2e5, "4.4 Minutes !C Past Umbra ", charsize = 1.3, alignment = 0, color = timeColors[1] 
+      ENDIF
       
+      ;begin residual plot
+      AL_legend, ['Raw Io Spectrum','Jupiter Scattered Light Fit'], Psym = [0,0], linestyle = [0,1], charsize = 1.4,linsize = 0.5, /left
+      cgplot, spec, WL, psym = 0, Ytitle = 'Residual [R / '+cgsymbol('Angstrom')+']', xtitle = 'Wavelength ('+cgsymbol('Angstrom')+')', $
+        yr = [-1000*5.81,3500*5.81], xr = [5888.,5898.], /nodata, pos = pos[*,1], /noerase
+      cgtext, 5893.95, -900*5.81, "Io Doppler Shift", charsize = 1.3;, alignment = 0.5
+      cgtext, 5896, -900*5.81, "Telluric", charsize = 1.3;, alignment = 0.5
+      
+      ;plotting residual plot
       for i = 1, n_elements(Eclipse_files)-1 do begin
-        cgplot, WL_array[*, i], residual_array[*, i], /OVERPLOT, COLOR = timeColors[i], psym=10
-        cgplot, WL_array[*, i], LSF_Fit_array[*, i], /OVERPLOT, COLOR = timeColors[i]
+        cgplot, WL_array[*, i], residual_array[*, i]*5.81, /OVERPLOT, COLOR = timeColors[i], psym=10
+        cgplot, WL_array[*, i], LSF_Fit_array[*, i]*5.81, /OVERPLOT, COLOR = timeColors[i]
+        cgplot, [5889.95, 5889.95], [-10000., 0.], linestyle = 1, /overplot
+        cgplot, [5895.92, 5895.92], [-10000., 0.], linestyle = 1, /overplot
+        cgplot, [DopplerShift_array1[i], DopplerShift_array1[i]], [-10000., 0.], COLOR = timeColors[i], /overplot
+        cgplot, [DopplerShift_array2[i], DopplerShift_array2[i]], [-10000., 0.], COLOR = timeColors[i], /overplot
       endfor
       cgps_close
     stop
+    
     pos =  [.17,.2,.98,.9]
     cgPS_Open, filename = Reduced_Dir+'Na5888_lightcurve.eps', /ENCAPSULATED, xsize = 10., ysize = 6.5
     !P.font=1
     device, SET_FONT = 'Helvetica Bold', /TT_FONT
     !p.charsize = 3.
     loadct, 0
-    cgplot, T_Shadow_array, Brightness_array, psym = 15, Ytitle = 'Rayleighs (5.1 sq arcsec aperture)', xtitle = 'Minutes After Ingress', title = 'Io''s NA 5888'+cgsymbol('Angstrom') + ' Response to Eclipse',  $
+    cgplot, T_Shadow_array, Brightness_array, psym = 15, Ytitle = 'Rayleighs (5.1 sq arcsec aperture)', xtitle = 'Minutes After Ingress', title = 'Io''s NA D Lines Response to Eclipse',  $
       ERR_YLOW = ERR_Brightness_array, ERR_YHigh = ERR_Brightness_array, ERR_XLOW = EXPTime_array/2., ERR_XHigh = EXPTime_array/2., yr = [0, 1500], xr = [range1,range2], /nodata, pos = pos
   
     x = findgen(Umbra_ET - PenUmbra_ET) / 60.
@@ -743,8 +835,8 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
       ypoly = [  0., !Y.CRange[1], !Y.CRange[1], 0., 0.]
       cgColorFill, xpoly, ypoly, Color=colors[j]
     ENDFOR
-    xpoly = [range1,     range1, !X.CRange[1],  !X.CRange[1],  range1]
-    ypoly = [  0., !Y.CRange[1], !Y.CRange[1], 0., 0.]
+    xpoly = [3.5,     3.5, !X.CRange[1],  !X.CRange[1],  3.5]
+    ypoly = [  3.5, !Y.CRange[1], !Y.CRange[1], 3.5, 3.5]
     cgColorFill, xpoly, ypoly, color = 'charcoal', /LINE_FILL, orientation = 45., thick = .1
     cgColorFill, xpoly, ypoly, color = 'charcoal', /LINE_FILL, orientation = -45., thick = .1
     cgtext, 2.5, !Y.CRange[1]/6., 'Penumbral Eclipse', orientation = 90., color = 'white'
@@ -752,256 +844,400 @@ Pro Io_Eclipses_ARCES_PEPSI_V2, Part=Part, Date=Date
       ERR_YLOW = ERR_Brightness_array, ERR_YHigh = ERR_Brightness_array, ERR_XLOW = EXPTime_array/2., ERR_XHigh = EXPTime_array/2.
     cgps_close
     ENDIF
-
-
-
-
-
-
-
-
-
-
-
-  ;    window, 1
-  ;    for i = 1, 6 do begin
-  ;      spec = MRDFITS( reduced_dir+'sumIo_free_and_clear.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-  ;      raw_header  = headfits(reduced_dir.Substring(0,-9)+'Io_free_and_clear.000'+strcompress(i, /remove_all)+'.fits')
-  ;      spec = spec / sxpar(raw_header, 'EXPTIME')
-  ;      MWRFITS, spec / Cont_Sensitivity, reduced_dir+'R_per_A_Io_free_and_clear.000'+strcompress(i, /remove_all)+'.ec.fits', header, /CREATE, /silent ;/create overwrites
-  ;    endfor
-  ;    window, 0
-  ;    cgplot, WL, spec, xr = [5888,5898], yr = [0, 1.e6], ytitle = 'R/A', /nodata
-  ;    for i = 1, 6 do begin
-  ;      spec = MRDFITS( reduced_dir+'R_per_A_Io_free_and_clear.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-  ;      WL   = sxpar(header, 'CRVAL1')+findgen(N_elements(jup_center))*sxpar(header, 'Cdelt1')
-  ;      cgplot, WL, spec-8.e2*i, xr = [5888,5898], Color=timeColors[i], yr = [0, 1.5e4], ytitle = 'R/A', /overplot
-  ;    endfor
-  ;
-
-
+  ; ***************************************************Combined Light Curve*********************************************************************
   stop
-
-  ;;
-  ;;    cgplot, WL_A, Rayleighs_per_angstrom-3.e5, color = 'blue', /overplot
-  ;;    LSF = LSF_ROTATE(1., 20)
-  ;;    cgplot, WL_A, convol(Rayleighs_per_angstrom, GAUSSIAN_FUNCTION(5), /normalize)-3.e5, color = 'orange', /overplot
-  ;;
-  ;    window, 1
-  ;    Telluric_Absorption_Spectrum = test_cal / smoothed_expected_flux
-  ;
-  ;    cgplot, wl, test_cal, xr = [6290, 6310], psym =10
-  ;    cgplot, wl, expected_flux, /overplot, color = 'red'
-  ;stop
-  ;
-  ;
-  ;    parinfo            = replicate( {value:0., fixed: 0b, limited: [0b,0b], limits: fltarr(2) }, 3)
-  ;    parinfo[0].limited = 1b                                 ; limit differences in multiplier amplitude
-  ;    parinfo[0].limits  = [0.5, 2.]
-  ;    parinfo[1].limited = 1b                                 ; limit additive differences
-  ;    parinfo[1].limits  = [-2.e6, 2.e6]
-  ;    parinfo[2].limited = 1b                                 ; limit differences in smooth width
-  ;    parinfo[2].limits  = [0.01, 5.]
-  ;
-  ;    fit_ind = where((wl gt 5880.) and (wl lt 5910.), /NULL)
-  ;
-  ;
-  ;    X = expected_flux
-  ;    Y = test_cal
-  ;    Err_Y = sqrt(test) / Cont_Sensitivity
-  ;
-  ;    dr_s         = minmax(Y[fit_ind], /NaN)
-  ;    dr_r         = minmax(x[fit_ind], /NaN)
-  ;    multiplier   = (dr_s[1]-dr_s[0]) / (dr_r[1]-dr_r[0])
-  ;    X = x * multiplier
-  ;    x = x + min(Y[fit_ind]) - min(x[fit_ind])
-  ;    cgplot, wl, x, /overplot, color = 'blue'
-  ;
-  ;    p0 = [1.11, -1.e6, 2.5] ; guess at initial Multiply P[0], Add P[1] and Smooth P[2] to
-  ;    p = mpfitfun('Match_Reference_Spectrum', x[fit_ind], y[fit_ind], err_y[fit_ind], p0, /NaN, status=status, parinfo = parinfo) ; Fit a y = mx + b function to the spectrum at every spatial bin... SLOW
-  ;
-  ;    ; Multiply P[0], Add P[1] and Smooth P[2] a reference spectrum (X) until it best matches Y
-  ;    hacked_expected_flux = P[0]*gauss_smooth(X, P[2], /EDGE_TRUNCATE) + P[1]
-  ;    cgplot, wl, hacked_expected_flux, /overplot, color = 'green'
-  ;    cgplot, wl, .95*gauss_smooth(X, 2.6, /EDGE_TRUNCATE) -10000., /overplot, color = 'orange'
-  ;    airmass = sxpar(raw_header, 'Airmass')
+  if part eq 2 then begin
+    ;array of O6300 brightness because a switch between non tell and tell is needed.... Will find a way to made this automated
+    Brightness_array1 = [0.00000000, 794.09253, 589.20813, 486.21848, 539.39917, 469.25598, 263.75262]
+    err_Brightness_array1 = [0.00000000, 110.09584, 63.044201, 45.346310, 104.83195, 138.38080, 34.337162]
+    ;begin plot
+    cgPS_Open, filename = Reduced_Dir+'combined_lightcurve.eps', /ENCAPSULATED, xsize = 10., ysize = 6.5
+    !P.font=1
+    device, SET_FONT = 'Helvetica Bold', /TT_FONT
+    !p.charsize = 3.
+    loadct, 0
+    cgplot, T_Shadow_array, Brightness_array*5.81, psym = 15, Ytitle = 'Rayleighs ', xtitle = 'Minutes After Ingress', title = 'Io''s Na and O Response to Eclipse',  $
+      ERR_YLOW = ERR_Brightness_array*5.81, ERR_YHigh = ERR_Brightness_array*5.81, ERR_XLOW = EXPTime_array/2., ERR_XHigh = EXPTime_array/2., yr = [0, 1500*5.81], xr = [range1,range2], /nodata, pos = pos
+      x = findgen(Umbra_ET - PenUmbra_ET) / 60.
+      colors = reverse(BytScl(x, MIN=min(x), MAX=2.*max(x)))+128
+      ;reverse(BytScl(x, MIN=min(x), MAX=max(x)))
+      FOR j=0,n_elements(x)-2 DO BEGIN
+        xpoly = [x[j],         x[j], x[j+1],       x[j+1],         x[j]]
+        ypoly = [  0., !Y.CRange[1], !Y.CRange[1], 0., 0.]
+        cgColorFill, xpoly, ypoly, Color=colors[j]
+      ENDFOR
+      xpoly = [3.5,     3.5, !X.CRange[1],  !X.CRange[1],  3.5]
+      ypoly = [  3.5, !Y.CRange[1], !Y.CRange[1], 3.5, 3.5]
+      cgColorFill, xpoly, ypoly, color = 'charcoal', /LINE_FILL, orientation = 45., thick = .1
+      cgColorFill, xpoly, ypoly, color = 'charcoal', /LINE_FILL, orientation = -45., thick = .1
+      cgtext, 2.5, !Y.CRange[1]/6., 'Penumbral Eclipse', orientation = 90., color = 'white'
+    for i = 1, n_elements(Eclipse_files)-1 do begin
+      cgplot, T_Shadow_array[i], Brightness_array1[i]*5.81, psym = 16, /noerase, symsize = 1.5, yr = [0, 1500*5.81], xr = [range1,range2], pos = pos, $
+        ERR_YLOW = ERR_Brightness_array1[i]*5.81, ERR_YHigh = ERR_Brightness_array1[i]*5.81, ERR_XLOW = EXPTime_array[i]/2., ERR_XHigh = EXPTime_array[i]/2., color = ['blue']
+      cgplot, T_Shadow_array[i], Brightness_array[i]*5.81, psym = 15, /noerase, symsize = 1.5, yr = [0, 1500*5.81], xr = [range1,range2], pos = pos, $
+        ERR_YLOW = ERR_Brightness_array[i]*5.81, ERR_YHigh = ERR_Brightness_array[i]*5.81, ERR_XLOW = EXPTime_array[i]/2., ERR_XHigh = EXPTime_array[i]/2., color = ['red']
+    endfor
+    Case date of
+      'UT180320': AL_legend, ['O6300' +cgsymbol('Angstrom') + ' in Ingress','Na D  in Ingress'], Psym = [16,15], color = ['blue','red'],textcolor = ['blue','red'], linestyle = [0,1], charsize = 1.6,linsize = 1, /right, /clear
+    endcase
+    cgps_close
+  endif
+  
   stop
+  if Part eq 4 then begin ; Make waterfall plots of O777-
+    ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    ;--------------------------------------------------------Get the O 777- Scatter Fitting + Coadd-------------------------------------------------------------------------
+    ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-  ; ------------------------UT180320 Eclipse ---------------------------------
-  dir  = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\'
+    ; get color versus ingress time
+    timeColors = BytScl(findgen(11), Min=0, Max=11, Top=11)
+    Color=timeColors[0]
+    cgLoadCT, 33, NColors=8, /reverse
+
+    ;O6300 demands telluric corrected spectra:
+    O4 = 7771.934  ; Directly produced by e- smashing of SO2, See Ajello et al. (2008)
+    O5 = 7774.166
+    O6 = 7775.388
+
+    parinfo            = replicate( {value:0., fixed: 0b, limited: [0b,0b], limits: fltarr(2) }, 4)
+    parinfo[0].limited = 1b                                 ; limit differences in multiplier amplitude
+    parinfo[0].limits  = [1.e-4, 1.e-2]
+    parinfo[1].limited = 1b                                 ; limit additive differences
+    parinfo[1].limits  = [-1.e3, 1.e4]
+    parinfo[2].limited = 1b                                 ; limit differences in smooth width
+    parinfo[2].limits  = [1., 8.]
+    parinfo[3].limited = 1b                                 ; limit shift alignment
+    parinfo[3].limits  = [-10., 10.]
+
+    Jup_Cal_Tell_Corr = MRDFITS(reduced_dir+'R_per_A_Jupiter_Center.ec.fits', 0, header, /fscale, /unsigned, /silent)
+    Jup_Cal_Tell_Corr_err = MRDFITS(reduced_dir+'sig_R_per_A_Jupiter_Center.ec.fits', 0, header, /fscale, /unsigned, /silent)
+
+    ;-------------------Waterfall Plot Postscript Io and Fit Jovian scatter--------------------------------------------------------------------------------------------------------------
+    cgLoadCT, 33, NColors=8, /reverse
+    pos = cgLayout([1,2], OXMargin=[24,9], OYMargin=[10,12], YGap=0)
+    Pos[1,0] = Pos[1,0]*1.2 & Pos[3,1] = Pos[3,1]*1.2
+    cgPS_Open, filename = Reduced_Dir+'O10791_scatterfit_v2.eps', /ENCAPSULATED, xsize = 10, ysize = 8.
+    !P.font=1
+    device, SET_FONT = 'Helvetica Bold', /TT_FONT
+    !p.charsize = 2.5
+
+    ; setup the plot axis
+    spec = MRDFITS(reduced_dir+'R_per_A_'+Eclipse_files[1]+'.ec.fits', 0, header, /fscale, /unsigned, /silent)
+    WL   = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+    xr   = [7769.,7779.]
+    Case date of
+      'UT180320': yr   = [3.5e3, 8.e3]
+      'UT190812': yr   = [1.1e4, 4e4]
+    endcase
 
 
+    cgplot, WL, spec, psym = 0, Ytitle = 'R / '+cgsymbol('Angstrom'), $
+      title = 'Io OI 10.7-9.1 eV',  $
+      xr = xr, /nodata, pos = pos[*,0], xtickformat = '(A1)', yr = yr*5.81
+    ;define arrays
+    include_WLs            = where( ((wl gt xr[0]) and (wl lt xr[1])), /NULL)
+    residual_array         = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
+    WL_array               = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
+    EXPTime_array          = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array4     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array5     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array6     = fltarr(n_elements(Eclipse_files))
+    manual180320 = fltarr(n_elements(4))
+    manual180320 = [0.0001, -375, 0 ,0] ;manual tweaking of fitting params
 
-  spec = MRDFITS(dir+'fullspecIo_eclipsed.0001.ec.fits', 0, header, /fscale, /silent, /unsigned )
-  WL   = sxpar(header, 'CRVAL1')+findgen(170105)*sxpar(header, 'Cdelt1')
+    for i = 0, n_elements(Eclipse_files)-1 do begin
+      if i eq 0 then continue ;skip penumbra
+      spec        = MRDFITS(reduced_dir+'R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, header, /fscale, /unsigned, /silent)
+      spec_err    = MRDFITS(reduced_dir+'sig_R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, sig_header, /fscale, /unsigned, /silent)
+      WL          = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+      raw_header  = headfits(dir+Eclipse_files[i]+'.fits')
+      O4_Io_frame = O4 + O4 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      O5_Io_frame = O5 + O5 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      O6_Io_frame = O6 + O6 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      
+      WLs            = where((wl gt 7770) and (wl lt 7773), /NULL)
+      scatter_fitting_ind = WLs
+      ;fitting procedure
+      s0 = [0.001, 2200., 4.1, 0.4]
+      s = mpfitfun('Match_Jup_Combo', Jup_Cal_Tell_Corr[scatter_fitting_ind], Spec[scatter_fitting_ind], spec_err[scatter_fitting_ind], S0, /NaN, status = Scatter_fit_status, parinfo = parinfo, /verbose, maxiter = 250)
+      print, s
+      scatter_fit = interpolate(((S[0]) + manual180320[0])*gauss_smooth(Jup_Cal_Tell_Corr, S[2] + manual180320[2], /EDGE_TRUNCATE) + S[1] + manual180320[1] , findgen(n_elements(Jup_Cal_Tell_Corr )) - S[3] + manual180320[3])
 
-  wl_range      = 8. ;angstroms
-  shift_array   = [0, 1.5, 1.75, 2., 2.25, 2.5, 2.75]
-  ;Smooth_array  = [0,  18,  18,  18,  18,  18,  18] ; Good for H alpha 6563A
-  ;Smooth_array  = [0,  14,  14,  14,  14,  14,  14] ; Good for Fe I    5270A
-  Smooth_array  = [0,  14,  14,  14,  14,  14,  14]  ; Good for 5893
+      cgplot, WL, scatter_fit*5.81, color = timeColors[i], linestyle = 1, thick = 7, /overplot
+      cgplot, WL, spec*5.81, color = timeColors[i], thick = 5,/overplot
 
-  window, 0, xs = 1000, ys = 800
-  pos = cgLayout([1,2], YGap=0)
-  jup = MRDFITS(dir+'fullspecJupiter_Disk_Center.0001.ec.fits', 0, header, /silent, /fscale, /unsigned )
-  junk = [min(abs(wl - (line-wl_range/2)), low_ind), min(abs(wl - (line+wl_range/2)), hi_ind)]
-  cgplot, wl, spec, xr = [Line-wl_range/2, line+wl_range/2], /nodata, pos = pos[*,0], yr = [-.6, 1.], xtickformat = '(A1)'
-  for i = 1, 6 do begin
-    spec = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /silent, /fscale, /unsigned )
-    cgplot, wl, spec-.15*i, /overplot, Color=timeColors[i], thick = 2, pos = pos[*,0]
+      residual = Spec - scatter_fit
 
-    shifted = interpolate(smooth(jup, smooth_array[i]), findgen(n_elements(Jup)) - shift_array[i]) - .15*i
-    cgplot, wl, shifted, /overplot, Color=timeColors[i], thick = 2, pos = pos[*,0]  ; sub-pixel shifting
-    ;cgplot, wl, smart_shift(smooth(jup, smooth_array[i]), shift_array[i], /Interp)-.15*i, /overplot, Color=timeColors[i], thick = 2, pos = pos[*,0]
-  endfor
-  cgplot, wl, spec, xr = [Line-wl_range/2, line+wl_range/2], /nodata, yr = [-.3, .5], pos = pos[*,1], /noerase
-  cgplot, [5889.95095, 5889.95095], [-2., 2], linestyle = 1, /overplot
-  cgplot, [5895.92424, 5895.92424], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O1, O1], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O2, O2], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O3, O3], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O4, O4], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O5, O5], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O6, O6], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O7, O7], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O8, O8], [-2., 2], linestyle = 1, /overplot
-  cgplot, [O9, O9], [-2., 2], linestyle = 1, /overplot
-  cgplot, [S1, S1], [-2., 2], linestyle = 1, /overplot
-  cgplot, [S2, S2], [-2., 2], linestyle = 1, /overplot
-  cgplot, [S3, S3], [-2., 2], linestyle = 1, /overplot
+      WL_array[*, i]              = WL[include_WLs]
+      residual_array[*, i]        = residual[include_WLs]
+      EXPTime_array[i]            = sxpar(raw_header, 'EXPTIME') / 60.
+      DopplerShift_array4[i]       = O4_Io_frame
+      DopplerShift_array5[i]       = O5_Io_frame
+      DopplerShift_array6[i]       = O6_Io_frame
 
-  tot_stat = 0
-  co_add = fltarr(N_elements(WL))
-  for i = 1, 6 do begin
-    spec     = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /silent, /fscale, /unsigned )
-    ;residual = spec - smart_shift(smooth(jup, smooth_array[i]), shift_array[i], /Interp)
+    endfor
+    
+    cgplot, spec, WL, psym = 0, Ytitle = 'Coadded Residual (R / '+cgsymbol('Angstrom')+')', xtitle = 'Wavelength ('+cgsymbol('Angstrom')+')', $
+      yr = [-2000*5.81/6,2000*5.81/6], xr = xr, /nodata, pos = pos[*,1], /noerase
+    cgtext, 6299.34, -900, "Io Doppler Shift", charsize = 1.4, alignment = 0.5
+    cgtext, 6300.56, -900, "Telluric", charsize = 1.4, alignment = 0.5
 
-    residual = spec - interpolate(smooth(jup, smooth_array[i]), findgen(n_elements(Jup)) - shift_array[i])
-
-    co_add = co_add+residual
-    cgplot, wl, residual, /overplot, Color=timeColors[i], thick = 2, pos = pos[*,1]
-
-    ; find and plot the intantaneous Earth-Io Doppler Shift
-    cspice_UTC2ET, sxpar(header, 'DATE-OBS'), ET
-    cspice_spkezr, 'Io', ET + float(sxpar(header, 'EXPTIME'))/2. , 'J2000', 'LT+S', 'Earth', Io_Earth_State, ltime
-    theta  = cspice_vsep(Io_Earth_state[0:2], Io_Earth_state[3:5])
-    Io_wrt_Earth_Dopplershift = line * cos(theta) * norm(Io_Earth_State[3:5]) / cspice_clight()
-    Io_wrt_Earth_Dopplershift = line * cos(theta) * sqrt(Io_Earth_State[3]^2.+Io_Earth_State[4]^2.+Io_Earth_State[5]^2.) / cspice_clight()
-    cgplot, [5889.95095, 5889.95095]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [5895.92424, 5895.92424]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-
-    cgplot, [O1, O1]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O2, O2]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O3, O3]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O4, O4]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O5, O5]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O6, O6]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O7, O7]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O8, O8]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [O9, O9]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [S1, S1]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [S2, S2]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-    cgplot, [S3, S3]+Io_wrt_Earth_Dopplershift, [-2., 2], Color=timeColors[i], linestyle = 2, /overplot
-
-    stat = total(abs(residual[low_ind:hi_ind]))
-    tot_stat = tot_stat + stat
-    print, i, shift_array[i], smooth_array[i], stat
-  endfor
+    for i = 1, n_elements(Eclipse_files)-1 do begin
+      cgplot, WL_array[*, i], residual_array[*, i]*5.81/6, /OVERPLOT, COLOR = timeColors[i], psym=10
+      cgplot, WL_array[*, i], LSF_Fit_array[*, i]*5.81, /OVERPLOT, COLOR = timeColors[i]
+      cgplot, [O4, O4], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [O5, O5], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [O6, O6], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [DopplerShift_array4[i], DopplerShift_array4[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_array5[i], DopplerShift_array5[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_array6[i], DopplerShift_array6[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+    endfor
+    for i = 2, n_elements(Eclipse_files)-1 do begin
+      residual_array[*,1] = residual_array[*,1]+ residual_array[*,i]
+    endfor
+    cgplot, WL_array[*, 1], residual_array[*, 1]*5.81/6, /OVERPLOT, COLOR = 'black', thick = 6
+    cgps_close
+  endif
   stop
+  if Part eq 5 then begin ; Make waterfall plots of
+    ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    ;--------------------------------------------------------Get the O 8446 Scatter Fitting + Coadd-------------------------------------------------------------------------
+    ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    ; get color versus ingress time
+    timeColors = BytScl(findgen(11), Min=0, Max=11, Top=11)
+    Color=timeColors[0]
+    cgLoadCT, 33, NColors=8, /reverse
+
+    ;O6300 demands telluric corrected spectra:
+    O7 = 8446.25   ; Directly produced by e- smashing of SO2, See Ajello et al. (2008)
+    O8 = 8446.36
+    O9 = 8446.76
+    Fe = 8468.41
 
 
+    parinfo            = replicate( {value:0., fixed: 0b, limited: [0b,0b], limits: fltarr(2) }, 4)
+    parinfo[0].limited = 1b                                 ; limit differences in multiplier amplitude
+    parinfo[0].limits  = [1.e-4, 1.e-2]
+    parinfo[1].limited = 1b                                 ; limit additive differences
+    parinfo[1].limits  = [-3.5e3, 1.e4]
+    parinfo[2].limited = 1b                                 ; limit differences in smooth width
+    parinfo[2].limits  = [1., 8.]
+    parinfo[3].limited = 1b                                 ; limit shift alignment
+    parinfo[3].limits  = [-10., 10.]
+
+    Jup_Cal_Tell_Corr = MRDFITS(reduced_dir+'R_per_A_Jupiter_Center.ec.fits', 0, header, /fscale, /unsigned, /silent)
+    Jup_Cal_Tell_Corr_err = MRDFITS(reduced_dir+'sig_R_per_A_Jupiter_Center.ec.fits', 0, header, /fscale, /unsigned, /silent)
+
+    ;-------------------Waterfall Plot Postscript Io and Fit Jovian scatter--------------------------------------------------------------------------------------------------------------
+    cgLoadCT, 33, NColors=8, /reverse
+    pos = cgLayout([1,2], OXMargin=[22,11], OYMargin=[10,8], YGap=0)
+    Pos[1,0] = Pos[1,0]*1.2 & Pos[3,1] = Pos[3,1]*1.2
+    cgPS_Open, filename = Reduced_Dir+'O11095_scatterfit_v2.eps', /ENCAPSULATED, xsize = 10, ysize = 8.
+    !P.font=1
+    device, SET_FONT = 'Helvetica Bold', /TT_FONT
+    !p.charsize = 2.5
+
+    ; setup the plot axis
+    spec = MRDFITS(reduced_dir+'R_per_A_'+Eclipse_files[1]+'.ec.fits', 0, header, /fscale, /unsigned, /silent)
+    WL   = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+    xr   = [8441.,8451.]
+    Case date of
+      'UT180320': yr   = [2e3, 6e3]
+      'UT190812': yr   = [1.1e4, 4e4]
+    endcase
 
 
-  cgplot, wl, co_add, thick = 2, /overplot
+    cgplot, WL, spec, psym = 0, Ytitle = 'R / '+cgsymbol('Angstrom'), $
+      title = 'Io OI 11.0-9.5 eV',  $
+      xr = xr + 0.072, /nodata, pos = pos[*,0], xtickformat = '(A1)', yr = yr*5.81
+    ;define arrays
+    include_WLs            = where( ((wl gt xr[0]) and (wl lt xr[1])), /NULL)
+    residual_array         = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
+    WL_array               = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
+    EXPTime_array          = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array7     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array8     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array9     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_arrayF     = fltarr(n_elements(Eclipse_files))
+    manual180320 = fltarr(n_elements(4))
+    manual180320 = [0, 0, 0 ,0] ;manual tweaking of fitting params
 
-  print, tot_stat
+    for i = 0, n_elements(Eclipse_files)-1 do begin
+      if i eq 0 then continue ;skip penumbra
+      spec        = MRDFITS(reduced_dir+'R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, header, /fscale, /unsigned, /silent)
+      spec_err    = MRDFITS(reduced_dir+'sig_R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, sig_header, /fscale, /unsigned, /silent)
+      WL          = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+      raw_header  = headfits(dir+Eclipse_files[i]+'.fits')
+      O7_Io_frame = O7 + O7 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      O8_Io_frame = O8 + O8 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      O9_Io_frame = O9 + O9 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      Fe_Io_frame = Fe + Fe * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      
+      WLs            = where((wl gt 8447) and (wl lt 8449.75), /NULL)
+      exclude = where((wl gt 8445) and (wl lt 8447.25))
+      ;scatter_fitting_ind    = cgSetDifference(WLs, exclude)
+      scatter_fitting_ind = WLs
+      
+      
 
+      s0 = [0.001, -1000., 2.1, 0.4]
+      s = mpfitfun('Match_Jup_Combo', Jup_Cal_Tell_Corr[scatter_fitting_ind], Spec[scatter_fitting_ind], spec_err[scatter_fitting_ind], S0, /NaN, status = Scatter_fit_status, parinfo = parinfo, /verbose, maxiter = 250)
+      print, s
+      scatter_fit = interpolate((S[0]+ manual180320[0])*gauss_smooth(Jup_Cal_Tell_Corr, S[2]+ manual180320[2], /EDGE_TRUNCATE)+ S[1]+ manual180320[1], findgen(n_elements(Jup_Cal_Tell_Corr)) - S[3]+ manual180320[3])
 
+      cgplot, WL+ 0.072, scatter_fit*5.81, color = timeColors[i], linestyle = 1, thick = 7, /overplot
+      cgplot, WL+ 0.072, spec*5.81, color = timeColors[i], thick = 5,/overplot
 
-  window, 1
-  Line = 5577.330
-  pos = cgLayout([1,2], YGap=0)
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.9, 1.25], pos = pos[*,0]
-  for i = 1, 6 do begin
-    spec = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, Color=timeColors[i], thick = 2
-  endfor
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.9, 1.25], pos = pos[*,1], /noerase
-  for i = 1, 3 do begin
-    spec = MRDFITS(dir+'fullspecJovian_Scatter.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, thick = i
-  endfor
+      residual = Spec - scatter_fit
 
-  window, 2
-  Line = 6300.304
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.75, 1.4], pos = pos[*,0]
-  for i = 1, 6 do begin
-    spec = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, Color=timeColors[i], thick = 2
-  endfor
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.8, 1.3], pos = pos[*,1], /noerase
-  for i = 1, 3 do begin
-    spec = MRDFITS(dir+'fullspecJovian_Scatter.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, thick = i
-  endfor
+      WL_array[*, i]              = WL[include_WLs]
+      residual_array[*, i]        = residual[include_WLs]
+      EXPTime_array[i]            = sxpar(raw_header, 'EXPTIME') / 60.
+      DopplerShift_array7[i]       = O7_Io_frame
+      DopplerShift_array8[i]       = O8_Io_frame
+      DopplerShift_array9[i]       = O9_Io_frame
+      DopplerShift_arrayF[i]       = Fe_Io_frame
 
-  window, 3
-  Line = 6363.776
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.9, 1.1], pos = pos[*,0]
-  for i = 1, 6 do begin
-    spec = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, Color=timeColors[i], thick = 2
-  endfor
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.9, 1.1], pos = pos[*,1], /noerase
-  for i = 1, 3 do begin
-    spec = MRDFITS(dir+'fullspecJovian_Scatter.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, thick = i, pos = pos[*,1]
-  endfor
+    endfor
 
+    cgplot, spec, WL, psym = 0, Ytitle = 'Coadded Residual (R / '+cgsymbol('Angstrom')+')', xtitle = 'Wavelength ('+cgsymbol('Angstrom')+')', $
+      yr = [-2000*5.81/6,3000*5.81/6], xr = xr + 0.072, /nodata, pos = pos[*,1], /noerase
+    cgtext, 6299.34, -900, "Io Doppler Shift", charsize = 1.4, alignment = 0.5
+    cgtext, 6300.56, -900, "Telluric", charsize = 1.4, alignment = 0.5
 
-  window, 3
-  Line = 6363.776
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.9, 1.1], pos = pos[*,0]
-  for i = 1, 6 do begin
-    spec = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, Color=timeColors[i], thick = 2
-  endfor
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.9, 1.1], pos = pos[*,1], /noerase
-  for i = 1, 3 do begin
-    spec = MRDFITS(dir+'fullspecJovian_Scatter.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, thick = i, pos = pos[*,1]
-  endfor
-
-  window, 4
-  Line = 7664.8969 ; K D2
-  ;Line = 7698.9600  ; K D1
-  ;Line = 7682.9600 ; K both
-  ;Line = 8375.94   ; Cl I
-  ;Line = 4227.     ; Ca I
-  ;Line = 8446.38   ; O I
-  ;Line = 6731.      ; S II
-  ;Line = 6716.      ; S II
-  jup1 = MRDFITS(dir+'fullspecJovian_Scatter.0001.ec.fits', 0, header, /fscale, /unsigned )
-  jup2 = MRDFITS(dir+'fullspecJovian_Scatter.0002.ec.fits', 0, header, /fscale, /unsigned )
-  jup3 = MRDFITS(dir+'fullspecJovian_Scatter.0003.ec.fits', 0, header, /fscale, /unsigned )
-  jup =mean([[jup1],[jup2],[jup3]], dimension=2)
-
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [-.2, .2], pos = pos[*,0]
-  for i = 1, 6 do begin
-    spec = MRDFITS(dir+'fullspecIo_eclipsed.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    ;if i le 3 then jup = MRDFITS(dir+'fullspecJovian_Scatter.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec-jup, /overplot, Color=timeColors[i], thick = 2
-  endfor
-  cgplot, wl, spec, xr = [line-1.5, line+1.5], /nodata, yr = [.7, 1.1], pos = pos[*,1], /noerase
-  for i = 1, 3 do begin
-    spec = MRDFITS(dir+'fullspecJovian_Scatter.000'+strcompress(i, /remove_all)+'.ec.fits', 0, header, /fscale, /unsigned )
-    cgplot, wl, spec, /overplot, thick = i, pos = pos[*,1]
-  endfor
-
+    for i = 1, n_elements(Eclipse_files)-1 do begin
+      cgplot, WL_array[*, i] + 0.072, residual_array[*, i]*5.81/6, /OVERPLOT, COLOR = timeColors[i], psym=10
+      cgplot, WL_array[*, i], LSF_Fit_array[*, i], /OVERPLOT, COLOR = timeColors[i]
+      cgplot, [O7, O7], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [O8, O8], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [O9, O9], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [Fe, Fe], [-10000., 100000], linestyle = 1, /overplot
+      cgplot, [DopplerShift_array7[i], DopplerShift_array7[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_array8[i], DopplerShift_array8[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_array9[i], DopplerShift_array9[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_arrayF[i], DopplerShift_arrayF[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+    endfor
+    for i = 2, n_elements(Eclipse_files)-1 do begin
+      residual_array[*,1] = residual_array[*,1]+ residual_array[*,i]
+    endfor
+    cgplot, WL_array[*, 1] + 0.072, residual_array[*, 1]*5.81/6 , /OVERPLOT, COLOR = 'black', thick = 6
+    cgps_close
+  endif
   stop
+  if Part eq 6 then begin ; Make waterfall plots of
+    ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    ;--------------------------------------------------------Get the S 92-- Scatter Fitting + Coadd-------------------------------------------------------------------------
+    ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    ; get color versus ingress time
+    timeColors = BytScl(findgen(11), Min=0, Max=11, Top=11)
+    Color=timeColors[0]
+    cgLoadCT, 33, NColors=8, /reverse
+
+    ;O6300 demands telluric corrected spectra:
+    S1 = 9212.865  ; Directly produced by e- smashing of SO2, See Ajello et al. (2008)
+    S2 = 9228.092
+    S3 = 9237.538
+
+    parinfo            = replicate( {value:0., fixed: 0b, limited: [0b,0b], limits: fltarr(2) }, 4)
+    parinfo[0].limited = 1b                                 ; limit differences in multiplier amplitude
+    parinfo[0].limits  = [1.e-4, 1.e-2]
+    parinfo[1].limited = 1b                                 ; limit additive differences
+    parinfo[1].limits  = [-4.5e3, 1.e4]
+    parinfo[2].limited = 1b                                 ; limit differences in smooth width
+    parinfo[2].limits  = [1., 8.]
+    parinfo[3].limited = 1b                                 ; limit shift alignment
+    parinfo[3].limits  = [-10., 10.]
+
+    Jup_Cal_Tell_Corr = MRDFITS(reduced_dir+'R_per_A_Jupiter_Center.ec.fits', 0, header, /fscale, /unsigned, /silent)
+    Jup_Cal_Tell_Corr_err = MRDFITS(reduced_dir+'sig_R_per_A_Jupiter_Center.ec.fits', 0, header, /fscale, /unsigned, /silent)
+
+    ;-------------------Waterfall Plot Postscript Io and Fit Jovian scatter--------------------------------------------------------------------------------------------------------------
+    cgLoadCT, 33, NColors=8, /reverse
+    pos = cgLayout([1,2], OXMargin=[22,11], OYMargin=[10,8], YGap=0)
+    Pos[1,0] = Pos[1,0]*1.2 & Pos[3,1] = Pos[3,1]*1.2
+    cgPS_Open, filename = Reduced_Dir+'SI7965_scatterfit_v2.eps', /ENCAPSULATED, xsize = 10, ysize = 8.
+    !P.font=1
+    device, SET_FONT = 'Helvetica Bold', /TT_FONT
+    !p.charsize = 2.5
+
+    ; setup the plot axis
+    spec = MRDFITS(reduced_dir+'R_per_A_'+Eclipse_files[1]+'.ec.fits', 0, header, /fscale, /unsigned, /silent)
+    WL   = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+    xr   = [9210.,9240.]
+    Case date of
+      'UT180320': yr   = [1.5e3, 5.5e3]
+      'UT190812': yr   = [1.1e4, 4e4]
+    endcase
 
 
+    cgplot, WL, spec, psym = 0, Ytitle = 'R / '+cgsymbol('Angstrom'), $
+      title = 'Io SI 7.9-6.5 eV',  $
+      xr = xr, /nodata, pos = pos[*,0], xtickformat = '(A1)', yr = yr*5.81
+    ;define arrays
+    include_WLs            = where( ((wl gt xr[0]) and (wl lt xr[1])), /NULL)
+    residual_array         = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
+    WL_array               = fltarr(N_elements(include_WLs), n_elements(Eclipse_files))
+    EXPTime_array          = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array1     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array2     = fltarr(n_elements(Eclipse_files))
+    DopplerShift_array3     = fltarr(n_elements(Eclipse_files))
+    manual180320 = fltarr(n_elements(4))
+    manual180320 = [0, 0, 0 ,0] ;manual tweaking of fitting params
 
+    for i = 0, n_elements(Eclipse_files)-1 do begin
+      if i eq 0 then continue ;skip penumbra
+      spec        = MRDFITS(reduced_dir+'R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, header, /fscale, /unsigned, /silent)
+      spec_err    = MRDFITS(reduced_dir+'sig_R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, sig_header, /fscale, /unsigned, /silent)
+      WL          = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+      raw_header  = headfits(dir+Eclipse_files[i]+'.fits')
+      S1_Io_frame = S1 + S1 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      S2_Io_frame = S2 + S2 * sxpar(header, 'IO_DOPPL') / cspice_clight()
+      S3_Io_frame = S3 + S3 * sxpar(header, 'IO_DOPPL') / cspice_clight()
 
+      WLs            = where((wl gt 9214) and (wl lt 9225), /NULL)
+      exclude = where((wl gt 8445) and (wl lt 8447.25))
+      ;scatter_fitting_ind    = cgSetDifference(WLs, exclude)
+      scatter_fitting_ind = WLs
+      
+      ;fitting procedure
+      s0 = [0.001, -1000., 4.1, 0.4]
+      s = mpfitfun('Match_Jup_Combo', Jup_Cal_Tell_Corr[scatter_fitting_ind], Spec[scatter_fitting_ind], spec_err[scatter_fitting_ind], S0, /NaN, status = Scatter_fit_status, parinfo = parinfo, /verbose, maxiter = 250)
+      print, s
+      scatter_fit = interpolate((S[0]+ manual180320[0])*gauss_smooth(Jup_Cal_Tell_Corr, S[2]+ manual180320[2], /EDGE_TRUNCATE)+ S[1]+ manual180320[1], findgen(n_elements(Jup_Cal_Tell_Corr)) - S[3]+ manual180320[3])
+
+      cgplot, WL, scatter_fit*5.81, color = timeColors[i], linestyle = 1, thick = 7, /overplot
+      cgplot, WL, spec*5.81, color = timeColors[i], thick = 5,/overplot
+
+      residual = Spec - scatter_fit
+
+      WL_array[*, i]              = WL[include_WLs]
+      residual_array[*, i]        = residual[include_WLs]
+      EXPTime_array[i]            = sxpar(raw_header, 'EXPTIME') / 60.
+      DopplerShift_array1[i]       = S1_Io_frame
+      DopplerShift_array2[i]       = S2_Io_frame
+      DopplerShift_array3[i]       = S3_Io_frame
+
+    endfor
+
+    cgplot, spec, WL, psym = 0, Ytitle = 'Coadded Residual (R / '+cgsymbol('Angstrom')+')', xtitle = 'Wavelength ('+cgsymbol('Angstrom')+')', $
+      yr = [-2000*5.81/6,5000*5.81/6], xr = xr, /nodata, pos = pos[*,1], /noerase
+    cgtext, 6299.34, -900, "Io Doppler Shift", charsize = 1.4, alignment = 0.5
+    cgtext, 6300.56, -900, "Telluric", charsize = 1.4, alignment = 0.5
+
+    for i = 1, n_elements(Eclipse_files)-1 do begin
+      cgplot, WL_array[*, i], residual_array[*, i]*5.81/6, /OVERPLOT, COLOR = timeColors[i], psym=10
+      cgplot, WL_array[*, i], LSF_Fit_array[*, i], /OVERPLOT, COLOR = timeColors[i]
+      cgplot, [DopplerShift_array1[i], DopplerShift_array1[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_array2[i], DopplerShift_array2[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+      cgplot, [DopplerShift_array3[i], DopplerShift_array3[i]], [-10000., 100000], COLOR = timeColors[i], /overplot
+    endfor
+    for i = 2, n_elements(Eclipse_files)-1 do begin
+      residual_array[*,1] = residual_array[*,1]+ residual_array[*,i]
+    endfor
+    cgplot, WL_array[*, 1], residual_array[*, 1]*5.81/6, /OVERPLOT, COLOR = 'black', thick = 6
+    cgps_close
+  endif
 
 end
