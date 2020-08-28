@@ -30,12 +30,10 @@ function Gaussian_For_MPFIT, p, x=x, y=y, err=err, fit=fit
   ;RETURN, P[0] + GAUSS1(X, P[1:3])
 end
 
-
 FUNCTION MX_plus_B, X, P
   ; multipliy P[0] and offset P[1]
   return, P[0]*X+ P[1]
 end
-
 
 function shift_smooth, shift_and_smooth_by
   Common shift_smooth_common, spec, jup, correl_indicies, debug
@@ -4515,30 +4513,7 @@ if part eq 11.9 then begin
        window, 2
        cgplot, WL, residual, xr = [5888, 5897], /ynozero
        cgplot, WL[plot_WLs], LSF_Fit_array[*, i], /overplot, color = 'red'
-    endfor
-    
-;    ;Setup CHIANTI for use with the line ratios
-;      use_chianti, 'C:\ssw\packages\chianti', abund='C:\ssw\packages\chianti\abundance\sun_photospheric_2011_caffau.abund'
-;      
-;        ;  ;Test chianti vs my cloudy type program:
-;        EMISS = EMISS_CALC(11, 1, TEMP = 4., DENS=alog10(1600.), /NO_DE)
-;        WL = emiss.lambda
-;        result = emiss.em
-;        stop
-;;        vactoair, WL[[810,1198,1200]], test_wavelengths
-;;        print, test_wavelengths
-;;        print, result[1200] / result[1198], result[1200] / result[810], result[1198] / result[810]
-;;        ;density_ratios,'s_2', 4060., 6740., alog10(1600.), alog10(1601.), dens, ratio, desc, temp=1.e+4, /PHOTONS
-;;        ;temperature_ratios,'s_2', 4000., 6740., 4., 4.01, temps, ratio, desc, density=1.6e+3, /PHOTONS
-;;        Print, 'Chianti: 6731/6716 = 1.2816, 6731/4069 = 10.5199, 6716/4069 = 8.2084'
-;;        result = line_ratio('S_II', dens = 1600., temp = 10000.)
-;;        emissivity = result.emissivity / result.linewave ;change from units of ergs to (relative) photon units
-;;        print, emissivity[1,0] / emissivity[2,0] ;6731 / 6716 ratio
-;;        print, emissivity[1,0] / emissivity[4,0] ;6731 / 4069 ratio
-;;        print, emissivity[2,0] / emissivity[4,0] ;6716 / 4069 ratio
-;;        print, Temperature sensitive ratio in cloudy
-;;      stop
-;    
+    endfor   
 endif
 
 if part eq 12 then begin
