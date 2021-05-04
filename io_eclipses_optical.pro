@@ -1,6 +1,7 @@
  ; Analysis of Io's optical spectra in eclipse from datasets with Apache Point and Large Binocular telescopes
 ; Written by C. Schmidt, M. Sharov. BU Center for Space Physics, 2019-2021
 
+
 FUNCTION Match_Reference_Spectrum, X, P
   ; Multiply P[0], Add P[1] and Smooth P[2] a reference spectrum (X) until it best matches Y
     return, P[0]*gauss_smooth(X, P[2], /EDGE_TRUNCATE) + P[1]
@@ -106,7 +107,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
         reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
         calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
-        Eclipse_files         = ['Io_eclipsed.000'+strcompress(indgen(7)+3, /remove_all), 'Io_eclipsed.00'+strcompress(indgen(2)+10, /remove_all) ]
+        ;Eclipse_files         = ['Io_Penumbra.0001','Io_Sunlit.0001','Io_Sunlit.0002','Io_Sunlit.0003', 'Io_Sunlit.0004'] ;use this for Na D in sunlight
+        Eclipse_files         = ['Io_eclipsed.000'+strcompress(indgen(7)+3, /remove_all), 'Io_eclipsed.00'+strcompress(indgen(1)+10, /remove_all) ]
         Jupiter_Center_File   = 'Jupiter_Disk_Center.0002'
         Jovian_Scatter_files  = ['Jupiter_Approaching_Limb.0001']
         Standard_Star_files   = ['HD_159975_BFR.0001','HD_155379_A0V.0001']
@@ -130,7 +132,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
         reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
         calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
-        Eclipse_files         = ['Io_eclipsed.0019', 'Io_eclipsed.0020', 'Io_eclipsed.0023', 'Io_eclipsed.0025', 'Io_eclipsed.0026']  ;  until frame 22 Frame 24 is clearly in penumbra despite the name
+        Eclipse_files         = ['Io_eclipsed.0019', 'Io_eclipsed.0020', 'Io_eclipsed.0023']  ;  until frame 22 Frame 24 is clearly in penumbra despite the name
+        ;Eclipse_files         = ['Io_Free_and_Clear.0028', 'Io_Free_and_Clear.0029', 'Io_Free_and_Clear.0031', 'Io_Free_and_Clear.0033', 'Io_Free_and_Clear.0036'] ;use this for sunlight
         Jupiter_Center_File   = 'Jupiter_Disk_Center.0016'
         Jovian_Scatter_files  = ['Jupiter_Scatter.0017', 'Jupiter_Scatter.0030', 'Jupiter_Scatter.0032']
         Standard_Star_files   = ['HD_163336.0013', 'HD_163336.0014']
@@ -142,7 +145,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
         reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
         calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
-        Eclipse_files         = ['Io_eclipsed.000'+strcompress(indgen(7)+1, /remove_all), 'Io_Free_and_Clear.0001', 'Io_Free_and_Clear.0002', 'Io_Free_and_Clear.0003', 'Io_Free_and_Clear.0004', 'Io_Free_and_Clear.0005']     ; Frame 8 is clearly in penumbra despite the name
+        ;Eclipse_files         = ['Io_Penumbra.0001','Io_Free_and_Clear.0001','Io_Free_and_Clear.0002','Io_Free_and_Clear.0003', 'Io_Free_and_Clear.0004', 'Io_Free_and_Clear.0005', 'Io_Free_and_Clear.0006', 'Io_Free_and_Clear.0008']     ; Use this for sunlight
+        Eclipse_files         = ['Io_eclipsed.000'+strcompress(indgen(7)+1, /remove_all)]
         Jupiter_Center_File   = 'Jupiter_Disk_Center.0001'
         Jovian_Scatter_files  = ['Jupiter_Scatter.0001', 'Jupiter_Scatter.0002', 'Jupiter_Scatter.0003']
         Jovian_Scatter_files  = ['Jupiter_Scatter.0001', 'Jupiter_Scatter.0002', 'Jupiter_Scatter.0003']
@@ -155,7 +159,6 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
         reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
         calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
-        ;Eclipse_files         = ['Io_eclipsed.0022', 'Io_eclipsed.0023', 'Io_eclipsed.0024']  ; until frame 22 Frame 24 is clearly in penumbra despite the name
         Eclipse_files         = ['Io_eclipsed.0022', 'Io_eclipsed.0023']  ; until frame 22 Frame 24 is clearly in penumbra despite the name
         Jupiter_Center_File   = 'Jupiter_Disk_Center.0014'
         Jovian_Scatter_files  = ['Jupiter_Disk_Center.0014', 'Io_eclipsed.0020'] ; io eclipsed 20 has no sign of io emissions and may be a good background
@@ -219,7 +222,9 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
       device, /close
       set_plot, 'win'
     endif
-    
+ 
+  ;--------------------------------------
+
   ;-------------------------------------------Load Constants-----------------------------------------------------
   ; Define Rest wavelengths
     Na1 = 5889.95095
@@ -700,8 +705,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
     order_6364 = {WL_range:[6362.53, 6365.03], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:2, name:'order_6364'}
     if keyword_set(ingress) then order_Na_D.waterfall_plot_title = 'Io''s Airglow Response Following ' + date + ' Ingress'
     if keyword_set(ingress) then order_6300.waterfall_plot_title = 'Io''s Airglow Response Following ' + date + ' Ingress'
-    orders     = [order_Na_D]
-    ;orders     = [order_6300, order_6364, order_Na_D, order_NaIR, order_9225, order_8446, order_7774, order_K_D]
+    orders     = [order_6300 , order_Na_D] ;use this for the main two
+    ;orders     = [order_6300, order_6364, order_Na_D, order_NaIR, order_9225, order_8446, order_7774, order_K_D] ;use this to find ALL the regions
     
     MX_plus_B_parinfo          = replicate({value:0.D, fixed:0, limited:[0,0], limits:[0.D,0]}, 2)
     MX_plus_B_parinfo[1].fixed = 1        ; peg the additive "B" component of the MX_Plus_B at zero
@@ -714,8 +719,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
 
     Case date of
       'UT180320': begin
-        Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\R_per_A_Jovian_Scatter.0001.ec.fits', $
-                                    'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\R_per_A_Jovian_Scatter.0002.ec.fits', $
+        Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\R_per_A_Jovian_Scatter.0002.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\R_per_A_Jovian_Scatter.0003.ec.fits' ]
       end
       'UT190812': begin
@@ -730,6 +734,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits' ]
+        ;Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\R_per_A_Ganymede.0001.ec.fits'] ;use this for Sunlight
       end
       'UT200823': begin
         Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Center.ec.fits', $
@@ -760,6 +765,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits' ]
+        ;Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Ganymede.0001.ec.fits'] ;use this for Sunlight
       end
       'UT201001': begin
         Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Center.ec.fits', $
@@ -773,6 +779,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
                                     'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits' ]
+       ;Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Ganymede.0001.ec.fits'] ;use this for Sunlight
       end
       'UT201017': begin
         Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\R_per_A_Jupiter_Center.ec.fits', $
@@ -833,7 +840,9 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         'UT200908': begin
           if order.name eq 'order_Na_D' then begin
             yr_residual = [-4, 20]
-            YR          = [10,250]
+            YR          = [10,270]
+            ;yr_residual = [-50, 350] ;for in sunlight
+            ;YR          = [400, 3500] ;for in sunlight
             adjust_wavelength_solution = []
           endif
           if order.name eq 'order_6300' then begin
@@ -843,8 +852,10 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         end
         'UT201001': begin
           if order.name eq 'order_Na_D' then begin
-            yr_residual = [-4, 50]
-            YR          = [500, 3500]
+            yr_residual = [-4, 20]
+            ;yr_residual = [-50, 450] ;for in sunlight
+            ;YR          = [200, 3500] ;for in sunlight
+            YR          = [10, 250]
             adjust_wavelength_solution = 1
           endif
           if order.name eq 'order_6300' then begin
@@ -901,6 +912,9 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         spec        = MRDFITS(reduced_dir+'R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, header, /fscale, /unsigned, /silent)
         spec_err    = MRDFITS(reduced_dir+'sig_R_per_A_' + Eclipse_files[i] + '.ec.fits', 0, sig_header, /fscale, /unsigned, /silent)
         WL          = sxpar(header, 'CRVAL1')+findgen(N_elements(spec))*sxpar(header, 'Cdelt1')
+        ;window, i
+        ;full = mrdfits(reduced_dir+'fullspec' + Eclipse_files[i] + '.ec.fits', 0, /fscale, /silent, /unsigned )
+        ;cgplot, wl[include_WLs], full[include_WLs]
 
         for K = 0, n_elements(Fit_Me_To_The_Scatter)-1 do begin
           ; Which Jovian scatter are we testing out?
@@ -1037,12 +1051,12 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
           jup              = Mult_and_add[0]*Jup_Cal_Tell_Corr + Mult_and_add[1]
 
           ; Iterate Amoeba until it gives an answer
-            trial_smooth_and_shift = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [1., 1.], P0 = [4., -1.], FUNCTION_VALUE = fval, NMAX = 500, NCalls = NCalls)
+            trial_smooth_and_shift = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [1., 1.], P0 = [4., -1.], FUNCTION_VALUE = fval, NMAX = 1000, NCalls = NCalls)
             Case 1 of
               ( (fval[1] gt 1.) and (fval[1] lt 1.2) and (N_elements(trial_smooth_and_shift) eq 2) ): smooth_and_shift = trial_smooth_and_shift
             else: begin
               correl_indicies  = cgSetDifference(include_Wls_broad, AG_Ind)                    ; expand the wavelength range that we're fitting smooths & shifts over. 'correl_indicies' is passed in the common block
-              trial_smooth_and_shift2 = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [2.5, 10.], P0 = [1.25, 0.], FUNCTION_VALUE = fval, NMAX = 500, NCalls = NCalls)
+              trial_smooth_and_shift2 = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [2.5, 10.], P0 = [1.25, 0.], FUNCTION_VALUE = fval, NMAX = 1000, NCalls = NCalls)
               if ( (fval[1] gt 1.) and (fval[1] lt 1.2) and (N_elements(trial_smooth_and_shift2) eq 2) ) then smooth_and_shift = trial_smooth_and_shift2 $
                                                                                                          else smooth_and_shift = [0, shift_only]
               end  
@@ -1050,20 +1064,29 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
             correl_indicies  = cgSetDifference(include_Wls, AG_Ind) 
 
           smoothed_shifted = interpolate(gauss_smooth(jup, smooth_and_shift[0]), findgen(n_elements(Jup)) - smooth_and_shift[1])
-          Mult_and_add     = mpfitfun('MX_Plus_B', smoothed_shifted[correl_indicies], Spec[correl_indicies], Spec_err[correl_indicies], [mean(Spec[correl_indicies]/smoothed_shifted[correl_indicies]), 0.], $
-                             /NaN, status = Scatter_fit_status, PERROR = err_a, /quiet, weights = weights, parinfo = MX_plus_B_parinfo)          
+          Mult_and_add     = mpfitfun('MX_plus_B', smoothed_shifted[correl_indicies], Spec[correl_indicies], Spec_err[correl_indicies], [mean(Spec[correl_indicies]/smoothed_shifted[correl_indicies]), 0.], $
+                             /NaN, status = Scatter_fit_status, PERROR = err_a, /quiet, weights = weights, parinfo = MX_plus_B_parinfo)
           scatter_fit      = Mult_and_add[0]*smoothed_shifted + Mult_and_add[1]
+
+          if ((order.name eq 'order_6300') and (date EQ 'UT180320') and (i eq 5)) then begin
+          scatter_fit      = (Mult_and_add[0])*smoothed_shifted + Mult_and_add[1]
+          residual         = (Spec) - scatter_fit
+          residual_err     = make_array( N_elements(residual), value = stddev(residual[correl_indicies]) )
+          endif else begin
           residual         = Spec - scatter_fit
           residual_err     = make_array( N_elements(residual), value = stddev(residual[correl_indicies]) )
+          endelse
           
           plot_residual_array[*, i]     = residual[plot_WLs]
           err_plot_residual_array[*, i] = residual_err[plot_WLs]
           DopplerShift_array[*, i]      = Ios_Airglow
     
           ; plot the spectrum, fit and indices used for the fit (if we're in debug mode)
-            if order.name eq 'order_Na_D' then begin
-              cgplot, WL, scatter_fit + ((n_elements(Eclipse_files)-1)*12.) - (i*12.), color = timeColors[i], linestyle = 1, thick = 5, /overplot
-              cgplot, WL, spec + ((n_elements(Eclipse_files)-1)*12.) - (i*12.), color = timeColors[i], thick = 5, /overplot
+            if ((order.name eq 'order_6300') and (date EQ 'UT180320')) then begin
+              ;cgplot, WL, scatter_fit + ((n_elements(Eclipse_files)-1)*12.) - (i*12.), color = timeColors[i], linestyle = 1, thick = 5, /overplot
+              ;cgplot, WL, spec + ((n_elements(Eclipse_files)-1)*12.) - (i*12.), color = timeColors[i], thick = 5, /overplot
+              cgplot, WL, scatter_fit, color = timeColors[i], linestyle = 1, thick = 5, /overplot
+              cgplot, WL, spec, color = timeColors[i], thick = 5, /overplot
             endif else begin
               ;cgplot, WL[correl_indicies], scatter_fit[correl_indicies], color = timeColors[i], psym=14, /overplot ----> useful to confirm spectral regions being fit for jovian scatter
               cgplot, WL, scatter_fit, color = timeColors[i], linestyle = 1, thick = 5, /overplot
@@ -1115,7 +1138,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
                     parinfo[2].value      = median(Possible_line_width[i,*])
                   
                   ; Gaussian fit
-                    LSF_fitting_ind       = where( abs(wl[plot_WLs] - Ios_airglow[lines_to_fit[j]]) lt 0.3, /NULL)
+                    LSF_fitting_ind       = where( abs(wl[plot_WLs] - Ios_airglow[lines_to_fit[j]]) lt 0.25, /NULL)
                     tsum_integral_ind     = where( (wl[plot_WLs] - Ios_airglow[lines_to_fit[j]] lt 0.4) and (wl[plot_WLs] - Ios_airglow[lines_to_fit[j]] gt -0.3), /NULL) ;HACKED FIX FOR FAULTY GAUSSIAN ONLY FOR DEMONSTRATION OF 201001
                     fa                    = { x:wl[plot_WLs[LSF_fitting_ind]], y:plot_residual_array[LSF_fitting_ind, i], err: err_plot_residual_array[LSF_fitting_ind, i] }
                     a                     = mpfit('Gaussian_for_MPFIT', [2., parinfo[1].value, parinfo[2].value], funct=fa, maxiter=50, STATUS = Did_it_work, /Quiet, NPEGGED = NPEGGED, parinfo=parinfo)
@@ -3840,7 +3863,11 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         cgps_close
    endfor ;dir_index
   stop 
+  
+  
    ; Plot temporal lightcurves of the UT 180320 and LBT ingress O and Na D results
+   
+   
    Reduced_Dirs = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\', 'D:\DATA\LBT\Reduced\']
    ;Dates        = ['20 March 2018', '19 April 24']
    Dates        = ['UT180320', 'UT190424']
@@ -4099,7 +4126,12 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
      cgps_close
    endfor ;dir_index
 stop
+
+
+
   ; Begin plotting procedure of torus curves in comparison to oxygen 6300 value
+  
+  
     cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\6300_vs_Torus_latitude_Ingress.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
       !P.font=1
       device, SET_FONT = 'Helvetica Bold', /TT_FONT
@@ -4181,8 +4213,10 @@ stop
       cglegend, title = ['190424', '180320', '201001', '180807', '200908', '201017', '200823'], Psym = [14, 16, 21, 4, 36, 23, 35], charsize = 1.2, $
       bg_color = 'white', color = ['red', 'red', 'red', 'red', 'red', 'red', 'red'], alignment = 1, Location=[0.9, 0.88], /Background, /BOX, vspace = 1.2, length = 0
     cgps_close
+    
+    
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;plotting Na
+    ;plotting Na versus Torus lattitude
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\NaD_vs_Torus_latitude_Ingress.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
     !P.font=1
@@ -4194,7 +4228,7 @@ stop
       restore, 'D:\DATA\LBT\Reduced\O2_Torus_params.sav'
       restore, 'D:\DATA\LBT\Reduced\Na1Na2_fit_params.sav'
         cgplot, abs(Torus_params.shift), O2_fit_params.Brightness, psym = 14, xtitle = 'Latitude from Centrifugal Equator [deg]', $
-          title = 'Na D!D1!N + D!D2!N'  +' vs Io''s Torus Latitude', yr = yr, xr = [1.0,6.7],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
+          title = 'Na D!D1!N + D!D2!N'  +' vs Io''s Torus Latitude', yr = yr, xr = [1.5,6.7],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
         cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [kR]', COLOR = 'black', /Save, /ystyle
         cgplot, abs(Torus_params.shift), Na1Na2_fit_params.Brightness, psym = 16, /overplot, color = 'orange', $
           ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness
@@ -4256,29 +4290,67 @@ stop
       bg_color = 'white', color = ['orange', 'orange', 'orange', 'orange', 'orange', 'orange'], alignment = 1, Location=[0.30, 0.88], /Background, /BOX, vspace = 1.2, length = 0
     cgps_close
 
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;Plotting Na D in sunlight: currently only plotting 201001
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ;cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\6300_vs_Torus_latitude_Egress.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
-    ;  !P.font=1
-    ;  device, SET_FONT = 'Helvetica Bold', /TT_FONT
-    ;  yr = [0, 7]
-    ;  pos = [0.12,0.17,0.9,0.9]
+    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\NaD_Sunlit.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
+    !P.font=1
+    device, SET_FONT = 'Helvetica Bold', /TT_FONT
+    yr = [0, 0.16]
+    pos = [0.120000,0.170000,0.900000,0.900000]
+    
+    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav'
+    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
+    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
+    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+    
+    cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 14, xtitle = 'Time after Egress', $
+      title = 'Na D!D1!N + D!D2!N'  +' Emerging into Sunlight', yr = yr, xr = [0, 120.],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
+    cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [MR]', COLOR = 'black', /Save, /ystyle
+    
+       cgplot, Io_Airglow_params.T_P_Shadow[3:*] - 133.32, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., psym = 34, /overplot, color = 'orange', $
+         ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
+         ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
+         ERR_XLOW = (Io_Airglow_params.exptime/2.)[3:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[2:*], ERR_WIDTH = .005
+       cgplot, Io_Airglow_params.T_P_Shadow[3:*] - 133.32, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., color = 'orange', /overplot
+       
+       cgplot, Io_Airglow_params.T_P_Shadow[0:3] - 133.32, [0,0,0, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3]]/1000., psym = 34, /overplot, color = 'orange', $
+         ERR_YLOW  = [(sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))]/1000., $
+         ERR_YHigh = [(sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))]/1000., $
+         ERR_XLOW = (Io_Airglow_params.exptime/2.)[0:3], ERR_XHigh = (Io_Airglow_params.exptime/2.)[0:3], ERR_WIDTH = .005, /err_clip
+       cgplot, Io_Airglow_params.T_P_Shadow[0:3] - 133.32, [0,0,0, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3]]/1000., color = 'orange', /overplot
+   cgps_close
+   
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   ;Plotting Na D ratios in sunlight: currently only plotting 201001
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   
+   cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\NaD_ratios.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
+   !P.font=1
+   device, SET_FONT = 'Helvetica Bold', /TT_FONT
+   yr = [0, 0.16]
+   pos = [0.120000,0.170000,0.900000,0.900000]
 
-    ;  restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\Io_Airglow_params.sav'
-    ;  Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-      
-    ;  cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.brightness[ind_6300,*], psym = 15, xtitle = 'Minutes After Penumbral Ingress', $
-    ;    title = '[O I] 6300'+cgsymbol('Angstrom') +' & Io''s Torus Latitude', yr = yr, xr = [70, 150],YTICKFORMAT="(A1)", yticks = 1, /nodata, pos = pos
-    ;  cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [kR]', COLOR = 'red', /Save
-    ;  cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.brightness[ind_6300,*], psym = 15, /overplot, color = 'red', /err_clip, $
-    ;    ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2.
-    ;  cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.brightness[ind_6300,*], color = 'red', /overplot
+   restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav'
+   Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
+   Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
+   Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+   Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
 
-    ;  cgAxis, YAxis=1, YRange=[4, 7], title= 'Latitude from Centrifugal Equator [deg]', COLOR = 'purple', /Save
-    ;  cgplot, Io_Airglow_params.T_P_Shadow, abs(Io_Airglow_params.torus_latitude), psym = 15, /overplot, color = 'purple'
-    ;  cgplot, Io_Airglow_params.T_P_Shadow, abs(Io_Airglow_params.torus_latitude), /overplot, color = 'purple'
-      
-    ;  print, 'Need an airmass correction on UT190812'
-    ;cgps_close
+   cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 14, xtitle = 'Ratio of Lines D2/D1', $
+     title = 'Na D!D1!N + D!D2!N'  +' Emerging into Sunlight', yr = yr, xr = [1, 2],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
+   cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [MR]', COLOR = 'black', /Save, /ystyle
+
+   cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[3:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., psym = 34, /overplot, color = 'orange', $
+     ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
+     ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
+     ERR_WIDTH = .005
+   cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[3:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., color = 'orange', /overplot
+
+   cgps_close
+
   endif
   stop
 end
