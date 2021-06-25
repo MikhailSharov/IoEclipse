@@ -174,6 +174,32 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
         Jovian_Scatter_files  = ['Jupiter_Disk_Center.0014', 'Io_eclipsed.0020'] ; io eclipsed 20 has no sign of io emissions and may be a good background
         Standard_Star_files   = ['Chi_Cap_A0V.0001', 'Chi_Cap_A0V.0002']
       end
+      date eq 'UT210601': begin      ; 
+        ingress               = 1    ;
+        Penumbra_UTC          = '2020-Oct-17 00:03:33' ;fix
+        Umbra_UTC             = '2020-Oct-17 00:07:04' ;fix
+        dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
+        reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
+        calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
+        Eclipse_files         = ['Ganymede_Full_Shadow.0008', 'Ganymede_Full_Shadow.0009', 'Ganymede_Full_Shadow.00'+strcompress(indgen(9)+10, /remove_all)] 
+        Jupiter_Center_File   = 'Jupiter_Disk_Center.0024'
+        Jovian_Scatter_files  = ['Jupiter_Scatter.0019', 'Jupiter_Scatter.0020', 'Jupiter_Scatter.0025', 'Jupiter_Scatter.0026'] ;
+        Standard_Star_files   = ['SAO146044_A0V.0021', 'SAO146044_A0V.0022']
+      end
+      date eq 'UT210609': begin      ; Somehow pointing drifted after the first frame. Working theory is that a shift in wind direction moved the telescope. 
+        ingress               = 1    ; bumping the pointing with a rough guess based on Europa clearly increase the 6300 signal. This data should not be used for a time series. Frustrating. 
+        Penumbra_UTC          = '2020-Oct-17 00:03:33' ;fix
+        Umbra_UTC             = '2020-Oct-17 00:07:04' ;fix
+        dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
+        reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
+        calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210609\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
+        Eclipse_files         = ['Io_FullShadow.0014', 'Io_FullShadow.0015'];, 'Io_FullShadow.0016', 'Io_FullShadow.0017', 'Io_FullShadow_Bumped_pointing.0018', $
+        ;                          'Io_FullShadow_Bumped_pointing.0019', 'Io_FullShadow_Bumped_pointing.0020', 'Io_FullShadow_Bumped_pointing.0021'] 
+        Jupiter_Center_File   = 'Jupiter_Disk_Center.0027'
+        Jovian_Scatter_files  = ['Jupiter_Scatter.0023', 'Jupiter_Scatter.0024'] ;
+        Standard_Star_files   = ['gam_Aqr_A0V.0010', 'SAO146044_A0V.0022']
+      end
+
       date eq 'UT180807': begin      ; Keck Data from Katherine de Kleer
         Directory             = 'D:\DATA\Keck\Io Eclipse HIRES\Katherine\'
         reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\Reduced\'
@@ -396,8 +422,12 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
       conversion = ((WL_nm*1.e-9)/(6.62606957e-34*299792458.D)) * (1./1.e4) * (1./10.)
       flux = flux * conversion      ; Cross-checked this result against Huebner et al. 1992.
       WL_A = temporary(WL_nm) * 10. ; Wavelength from nm into angstroms
-      VACTOAIR, WL_A, WL_A_Air      ; Vacuum to air wavelength conversion
-      WL_A = temporary(WL_A_Air)
+      WL_A = shift(WL_A, 1)         ; Evidently this is needed to line up with e.g., Bass 2000
+      WL_A = WL_A[1:-1]
+      flux = flux[1:-1]             ; trim things to clean up any edge effect due to the wavelength shift
+      WL_Vacuum = WL_A              ; Vacuum wavelength in A for the solar spectrum (need vaccum for g-value calculations)
+      VACTOAIR, WL_A, WL_A_Air      ; Vacuum to air wavelength conversion      
+      WL_A = temporary(WL_A_Air)      
 
     ; Scale the solar flux to Jupiter's instantaneous distance
       jup_center           = MRDFITS(reduced_dir+'fullspec'+Jupiter_Center_File+'.ec.fits', 0, Jupiter_center_header, /fscale, /silent, /unsigned )     ; fullspec, normalized to one
@@ -633,7 +663,16 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
       ; find the instantaneous Earth-Io Doppler Shift
         cspice_UTC2ET, sxpar(raw_header, 'DATE-OBS'), ET
         ET_mid_exposure = ET + float(sxpar(raw_header, 'EXPTIME'))/2.
-        cspice_spkezr, 'Io', ET_mid_exposure, 'J2000', 'LT+S', 'Earth', Io_Earth_State, ltime
+        cspice_spkezr, 'Io', ET_mid_exposure, 'J2000', 'LT+S', 'Earth', Io_Earth_State, ltime        
+        ;cspice_spkezr, 'Ganymede', ET_mid_exposure, 'J2000', 'LT+S', 'Earth', Io_Earth_State, ltime
+
+      ; Sodium D1+D2 g-value
+        cspice_spkezr, 'Io', ET_mid_exposure - Ltime, 'J2000', 'LT+S', 'Sun', Io_Sun_State, Io_Sun_ltime  
+        theta  = cspice_vsep(Io_Sun_state[0:2], Io_Sun_state[3:5])
+        Io_heliocentric_vel = cos(theta) * norm(Io_Sun_State[3:5])
+        GVALUE, 'Na-D', Io_heliocentric_vel*1.e3, norm(Io_Sun_state[0:2]) / 1.495927e8, WL_Vacuum, flux, g
+        SXADDPAR, Io_header, 'Na_G_Val', g, 'D2 + D1 photons/atom/s'
+
         theta  = cspice_vsep(Io_Earth_state[0:2], Io_Earth_state[3:5])
         Io_wrt_Earth_Dopplershift = cos(theta) * norm(Io_Earth_State[3:5])
         SXADDPAR, Io_header, 'Io_DOPPL', Io_wrt_Earth_Dopplershift, 'Io-Earth V_radial in km/s (mid exposure)'
@@ -741,14 +780,14 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
       order_K_D  = {WL_range:[7660., 7704.], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:3, name:'order_K_D'}
       order_8446 = {WL_range:[8444., 8448.], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:3, name:'order_8446'}
       order_9225 = {WL_range:[9208., 9242.], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:3, name:'order_9225'}
+      order_5577 = {WL_range:[5574., 5580.], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:3, name:'order_5577'}
       order_6300 = {WL_range:[6297.6, 6302.6], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:2, name:'order_6300'}
-      ;order_6364 = {WL_range:[6362.53, 6365.03], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:2, name:'order_6364'}
       order_6364 = {WL_range:[6361.53, 6366.03], waterfall_plot_title:'Io''s Airglow in Eclipse on ' + date, npanels:2, name:'order_6364'}
       if keyword_set(ingress) then order_Na_D.waterfall_plot_title = 'Io''s Airglow Response Following ' + date + ' Ingress'
       if keyword_set(ingress) then order_6300.waterfall_plot_title = 'Io''s Airglow Response Following ' + date + ' Ingress'
     
-    orders     = [order_6300, order_6364, order_Na_D] ; which lines to extract
-    ;orders     = [order_6300, order_6364, order_Na_D, order_NaIR, order_9225, order_8446, order_7774, order_K_D] ;use this to find ALL the regions
+    ;orders     = [order_5577, order_6300, order_6364, order_Na_D] ; which lines to extract
+    orders     = [order_6300, order_6364, order_Na_D, order_NaIR, order_9225, order_8446, order_7774, order_K_D] ;use this to plot ALL the wavelength regions with potential emission
 
     MX_plus_B_parinfo          = replicate({value:0.D, fixed:0, limited:[0,0], limits:[0.D,0]}, 2)
     MX_plus_B_parinfo[1].fixed = 1        ; peg the additive "B" component of the MX_Plus_B at zero
@@ -836,6 +875,44 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
           'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
           'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits' ]
       end
+      'UT210601': begin
+        Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\R_per_A_Jupiter_Center.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0004.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Jupiter_Scatter.0017.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Jupiter_Scatter.0030.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Jupiter_Scatter.0032.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0019.ec.fits', $         
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0020.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0025.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0026.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210609\Reduced\R_per_A_Jupiter_Scatter.0023.ec.fits', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210609\Reduced\R_per_A_Jupiter_Scatter.0024.ec.fits' ]
+      end
+      'UT210609': begin
+          Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\R_per_A_Jupiter_Center.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\R_per_A_Jupiter_Scatter.0004.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Jupiter_Scatter.0017.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Jupiter_Scatter.0030.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Jupiter_Scatter.0032.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0019.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0020.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0025.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210601\Reduced\R_per_A_Jupiter_Scatter.0026.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210609\Reduced\R_per_A_Jupiter_Scatter.0023.ec.fits', $
+            'D:\DATA\Apache Point\Echelle\Io Eclipses\UT210609\Reduced\R_per_A_Jupiter_Scatter.0024.ec.fits' ]
+        end
     endcase
 
     ; setup the plot axis
@@ -942,7 +1019,39 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
               adjust_wavelength_solution = 1
             endif
           end
-          else:
+          'UT210601': begin
+            adjust_wavelength_solution = []
+            if order.name eq 'order_Na_D' then begin
+              yr_residual = [-4, 10]
+              YR          = [45, 120]
+              adjust_wavelength_solution = []
+            endif
+            if order.name eq 'order_6300' then begin
+              yr_residual   = [-2, 35]
+              adjust_wavelength_solution = 1
+            endif
+            if order.name eq 'order_6364' then begin
+              yr_residual   = [-3, 12]
+              adjust_wavelength_solution = 1
+            endif
+          end
+          'UT210609': begin
+            adjust_wavelength_solution = []
+            if order.name eq 'order_Na_D' then begin
+              yr_residual = [-4, 10]
+              YR          = [45, 120]
+              adjust_wavelength_solution = []
+            endif
+            if order.name eq 'order_6300' then begin
+              yr_residual   = [-2, 35]
+              adjust_wavelength_solution = 1
+            endif
+            if order.name eq 'order_6364' then begin
+              yr_residual   = [-3, 12]
+              adjust_wavelength_solution = 1
+            endif
+          end
+          else: 
         endcase
 
       ; Define arrays
@@ -1233,8 +1342,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date
           cgplot, WL[plot_WLs], LSF_Fit_array[*, i], /OVERPLOT, COLOR = timeColors[i], thick = 3 ; plot the fit to Io's emission
         endif
       endfor ; loop over eclipse frames
-      cgplot, [(wl[plot_WLs[tsum_integral_ind]])[0], (wl[plot_WLs[tsum_integral_ind]])[0]], [0, 100000], /overplot, color = 'black'
-      cgplot, [(wl[plot_WLs[tsum_integral_ind]])[-1], (wl[plot_WLs[tsum_integral_ind]])[-1]], [0, 100000], /overplot, color = 'black'
+      ;cgplot, [(wl[plot_WLs[tsum_integral_ind]])[0], (wl[plot_WLs[tsum_integral_ind]])[0]], [0, 100000], /overplot, color = 'black'
+      ;cgplot, [(wl[plot_WLs[tsum_integral_ind]])[-1], (wl[plot_WLs[tsum_integral_ind]])[-1]], [0, 100000], /overplot, color = 'black'
       IF (date EQ 'UT180320') and (order.name eq 'order_6300') THEN BEGIN
         cgtext, Ios_airglow[line_index] - 0.7, 16, "Io's Doppler Shift", charsize = 1.4, alignment = 0.5
         cgtext, Io_airglow[line_index] + .5, 16, "Telluric [O I]", charsize = 1.4, alignment = 0.5
