@@ -792,13 +792,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
       if keyword_set(ingress) then order_Na_D.waterfall_plot_title = 'Io''s Airglow Response Following ' + date + ' Ingress'
       if keyword_set(ingress) then order_6300.waterfall_plot_title = 'Io''s Airglow Response Following ' + date + ' Ingress'
     
-<<<<<<< Updated upstream
-    ;orders     = [order_5577, order_6300, order_6364, order_Na_D] ; which lines to extract
-    orders     = [order_6300, order_6364, order_Na_D, order_NaIR, order_9225, order_8446, order_7774, order_K_D] ;use this to plot ALL the wavelength regions with potential emission
-=======
     orders     = [order_Na_D] ; which lines to extract
     ;orders     = [order_6300, order_6364, order_Na_D, order_NaIR, order_9225, order_8446, order_7774, order_K_D] ;use this to find ALL the regions
->>>>>>> Stashed changes
 
     MX_plus_B_parinfo          = replicate({value:0.D, fixed:0, limited:[0,0], limits:[0.D,0]}, 2)
     MX_plus_B_parinfo[1].fixed = 1        ; peg the additive "B" component of the MX_Plus_B at zero
