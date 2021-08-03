@@ -170,7 +170,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
         dir                   = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\'
         reduced_dir           = 'D:\DATA\Apache Point\Echelle\Io Eclipses\'+date+'\Reduced\'
         calibration_dir       = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\'  ; Directory with Stellar Spectra for Telluric Corrections
-        if sunlit eq 1 then Eclipse_files         = ['Io_Penumbra.0025','Io_Free_and_Clear.0026','Io_Free_and_Clear.0027','Io_Free_and_Clear.0028', 'Io_Free_and_Clear.0029', 'Callisto.0015']
+        if sunlit eq 1 then Eclipse_files         = ['Io_Penumbra.0025','Io_Free_and_Clear.0026','Io_Free_and_Clear.0027','Io_Free_and_Clear.0028', 'Io_Free_and_Clear.0029']
         if sunlit eq 0 then Eclipse_files         = ['Io_eclipsed.0022', 'Io_eclipsed.0023']  ; until frame 22 Frame 24 is clearly in penumbra despite the name
         Jupiter_Center_File   = 'Jupiter_Disk_Center.0014'
         Jovian_Scatter_files  = ['Jupiter_Disk_Center.0014', 'Io_eclipsed.0020'] ; io eclipsed 20 has no sign of io emissions and may be a good background
@@ -429,7 +429,10 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
       flux = flux[1:-1]             ; trim things to clean up any edge effect due to the wavelength shift
       WL_Vacuum = WL_A              ; Vacuum wavelength in A for the solar spectrum (need vaccum for g-value calculations)
       VACTOAIR, WL_A, WL_A_Air      ; Vacuum to air wavelength conversion      
-      WL_A = temporary(WL_A_Air)      
+      WL_A = temporary(WL_A_Air)     
+      
+      ind = where((WL_A gt 5886) and (WL_A lt 5900))
+      gvalue, 'Na-D', 21.19*1000, 5.1301, WL_A[ind], flux[ind], g 
 
     ; Scale the solar flux to Jupiter's instantaneous distance
       jup_center           = MRDFITS(reduced_dir+'fullspec'+Jupiter_Center_File+'.ec.fits', 0, Jupiter_center_header, /fscale, /silent, /unsigned )     ; fullspec, normalized to one
@@ -473,7 +476,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
           (Io_Airglow[i] eq  Na1) or (Io_Airglow[i] eq  Na2): begin                                                          ; correct telluric absorption only a high airmass?
 
 
-            if Date eq '' then begin ; INSERT DATE HERE FOR WHICH DATES need to be corrected. Part 0 needsto be rerun ebfore Part 1 for telluric corrections to take effect
+            if Date eq '200908' then begin ; INSERT DATE HERE FOR WHICH DATES need to be corrected. Part 0 needsto be rerun ebfore Part 1 for telluric corrections to take effect
 
 
               telluric_absorption = 1
@@ -678,6 +681,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
         Io_heliocentric_vel = cos(theta) * norm(Io_Sun_State[3:5])
         GVALUE, 'Na-D', Io_heliocentric_vel*1.e3, norm(Io_Sun_state[0:2]) / 1.495927e8, WL_Vacuum, flux, g
         SXADDPAR, Io_header, 'Na_G_Val', g, 'D2 + D1 photons/atom/s'
+        
+        print, [i, g]
 
         theta  = cspice_vsep(Io_Earth_state[0:2], Io_Earth_state[3:5])
         Io_wrt_Earth_Dopplershift = cos(theta) * norm(Io_Earth_State[3:5])
@@ -855,8 +860,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
           'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0001.ec.fits', $
           'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0002.ec.fits', $
           'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Scatter.0003.ec.fits' ]
-        if sunlit eq 1 then Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\R_per_A_Ganymede.0035.ec.fits', $
-           'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Ganymede.0001.ec.fits'] ;use this for Sunlight
+        if sunlit eq 1 then Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\R_per_A_Callisto.0015.ec.fits'] ;use this for Sunlight
       end
       'UT201001': begin
         if sunlit eq 0 then Fit_Me_To_The_Scatter    = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\R_per_A_Jupiter_Center.ec.fits', $
@@ -955,6 +959,8 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
           'UT190812': begin
             if order.name eq 'order_Na_D' then begin
               yr_residual = [-8, 21]
+              if sunlit eq 1 then sunlight_fix = 0 else sunlight_fix = 0
+              sunlight_fix = 0
               if sunlit eq 0 then YR          = [40,250]
               if sunlit eq 1 then YR          = [90,500]
               adjust_wavelength_solution = []
@@ -974,6 +980,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
               YR          = [28,170]
               if sunlit eq 1 then yr_residual = [-4, 100]
               if sunlit eq 1 then YR          = [0,2200]
+              if sunlit eq 1 then sunlight_fix = 0 else sunlight_fix = 0
               adjust_wavelength_solution = []
             endif
             if order.name eq 'order_6300' then begin
@@ -991,6 +998,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
               YR          = [45,280]
               if sunlit eq 1 then yr_residual = [-50, 350] ;for in sunlight
               if sunlit eq 1 then YR          = [300, 3400] ;for in sunlight
+              if sunlit eq 1 then sunlight_fix = 15 else sunlight_fix = 0
               adjust_wavelength_solution = []
             endif
             if order.name eq 'order_6300' then begin
@@ -1008,6 +1016,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
               YR          = [30, 180]
               if sunlit eq 1 then yr_residual = [-50, 450] ;for in sunlight
               if sunlit eq 1 then YR          = [200, 3500] ;for in sunlight
+              if sunlit eq 1 then sunlight_fix = 0 else sunlight_fix = 0
               adjust_wavelength_solution = 1
             endif
             if order.name eq 'order_6300' then begin
@@ -1025,6 +1034,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
               YR          = [45, 120]
               if sunlit eq 1 then yr_residual = [-50, 200] ;for in sunlight
               if sunlit eq 1 then YR          = [200, 3500] ;for in sunlight
+              if sunlit eq 1 then sunlight_fix = 10 else sunlight_fix = 0
               adjust_wavelength_solution = []
             endif
             if order.name eq 'order_6300' then begin
@@ -1109,8 +1119,12 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
 
         for K = 0, n_elements(Fit_Me_To_The_Scatter)-1 do begin
           ; Which Jovian scatter are we testing out?
-            Jup_Cal_Tell_Corr = MRDFITS(Fit_Me_To_The_Scatter[K], 0, Jupiter_Scatter_header, /fscale, /unsigned, /silent)
-            Jup_Cal_Tell_Corr      = interpolate(Jup_Cal_Tell_Corr, findgen(n_elements(Jup_Cal_Tell_Corr)) + 15.)
+        ; Which Jovian scatter are we using?
+          Jup_Cal_Tell_Corr = MRDFITS(Use_Scatter[i], 0, Jup_Scatter_header, /fscale, /unsigned, /silent)
+          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+          ;This is hacky. Better solution will be made soon. The wavelength correction depends on the scatter used for the moment guess is required.
+          Jup_Cal_Tell_Corr      = interpolate(Jup_Cal_Tell_Corr, findgen(n_elements(Jup_Cal_Tell_Corr)) + sunlight_fix)         ;CORRECTION for wavelength shift at spectrum (this is estimate for rough amount)
+          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           ; Define fitting indicies we need to avoid because of airglow itself.
             Ios_Airglow            = [Io_airglow + Io_airglow * sxpar(header, 'IO_DOPPL') / cspice_clight()] ; wavelength locations of all airglow lines, Ignore telluric K
             ARCES_1sigma_bandwidth = (mean(xr)/31500.) / 2.3548                                              ; FWHM in Angstroms / 2sqrt(2ln2) = 68% of flux enclosed within 1 sigma --> Appropriate for weak telluric airglow
@@ -1139,12 +1153,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
               end
             endcase
             correl_indicies  = cgSetDifference(include_Wls, AG_Ind)
-            ;cgplot, Wl[correl_indicies], Spec[correl_indicies], xr = xr, /ynozero
-            ;cgplot, Wl[correl_indicies], Jup[correl_indicies], color = 'red', /overplot
-            ;smoothed_shifted = interpolate(gauss_smooth(jup, smooth_and_shift[0]), findgen(n_elements(Jup)) - smooth_and_shift[1])
-            ;cgplot, Wl[correl_indicies], smoothed_shifted[correl_indicies], color = 'blue', /overplot
-            ;print, smooth_and_shift
-            ;stop
+
 
           smoothed_shifted = interpolate(gauss_smooth(jup, smooth_and_shift[0]), findgen(n_elements(Jup)) - smooth_and_shift[1])
           Mult_and_add     = mpfitfun('MX_Plus_B', smoothed_shifted[include_WLs_broad ], Spec[include_WLs_broad ], Spec_err[include_WLs_broad ], parinfo = MX_plus_B_parinfo, $
@@ -1225,7 +1234,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
           Jup_Cal_Tell_Corr = MRDFITS(Use_Scatter[i], 0, Jup_Scatter_header, /fscale, /unsigned, /silent)
           ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           ;This is hacky. Better solution will be made soon. The wavelength correction depends on the scatter used for the moment guess is required.
-          Jup_Cal_Tell_Corr      = interpolate(Jup_Cal_Tell_Corr, findgen(n_elements(Jup_Cal_Tell_Corr)) + 15.)         ;CORRECTION for wavelength shift at 
+          Jup_Cal_Tell_Corr      = interpolate(Jup_Cal_Tell_Corr, findgen(n_elements(Jup_Cal_Tell_Corr)) + sunlight_fix)         ;CORRECTION for wavelength shift at the spectrum (this is estimate for rough amount)
           ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ; Define fitting indicies we need to avoid because of airglow itself.
@@ -1246,28 +1255,25 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
           jup              = Mult_and_add[0]*Jup_Cal_Tell_Corr + Mult_and_add[1]
 
         ; Iterate Amoeba until it gives an answer
-          trial_smooth_and_shift = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [1., 1.], P0 = [4., -5.], FUNCTION_VALUE = fval, NMAX = 1000, NCalls = NCalls)
-          Case 1 of
-            ( (fval[1] gt 1.) and (fval[1] lt 1.2) and (N_elements(trial_smooth_and_shift) eq 2) ): smooth_and_shift = trial_smooth_and_shift
-            else: begin
-              correl_indicies  = cgSetDifference(include_Wls_broad, AG_Ind)                    ; expand the wavelength range that we're fitting smooths & shifts over. 'correl_indicies' is passed in the common block
-              trial_smooth_and_shift2 = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [2.5, 10.], P0 = [1.10, 0.], FUNCTION_VALUE = fval, NMAX = 1000, NCalls = NCalls)
-              if ( (fval[1] gt 1.) and (fval[1] lt 1.2) and (N_elements(trial_smooth_and_shift2) eq 2) ) then smooth_and_shift = trial_smooth_and_shift2 $
-              else smooth_and_shift = [0, shift_only]
-            end
-          endcase
+            trial_smooth_and_shift = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [1., 1.], P0 = [4., -5.], FUNCTION_VALUE = fval, NMAX = 500, NCalls = NCalls)
+            Case 1 of
+              ( (fval[1] gt 1.) and (fval[1] lt 1.2) and (N_elements(trial_smooth_and_shift) eq 2) ): smooth_and_shift = trial_smooth_and_shift
+              else: begin
+                correl_indicies  = cgSetDifference(include_Wls_broad, AG_Ind)                    ; expand the wavelength range that we're fitting smooths & shifts over. 'correl_indicies' is passed in the common block
+                trial_smooth_and_shift2 = AMOEBAX(1.e-4, 1.e-4, function_name='shift_smooth', SCALE = [2.5, 10.], P0 = [1.1, 0.], FUNCTION_VALUE = fval, NMAX = 500, NCalls = NCalls)
+                if ( (fval[1] gt 1.) and (fval[1] lt 1.2) and (N_elements(trial_smooth_and_shift2) eq 2) ) then smooth_and_shift = trial_smooth_and_shift2 $
+                else smooth_and_shift = [0, shift_only]
+              end
+            endcase
           correl_indicies  = cgSetDifference(include_Wls, AG_Ind)
   
           smoothed_shifted = interpolate(gauss_smooth(jup, smooth_and_shift[0]), findgen(n_elements(Jup)) - smooth_and_shift[1])
           Mult_and_add     = mpfitfun('MX_plus_B', smoothed_shifted[correl_indicies], Spec[correl_indicies], Spec_err[correl_indicies], [mean(Spec[correl_indicies]/smoothed_shifted[correl_indicies]), 0.], $
             /NaN, status = Scatter_fit_status, PERROR = err_a, /quiet, weights = weights, parinfo = MX_plus_B_parinfo)
-          scatter_fit      = Mult_and_add[0]*smoothed_shifted + Mult_and_add[1]
+          scatter_fit      = (Mult_and_add[0]*smoothed_shifted)+ Mult_and_add[1]
+          if ((date eq 'UT200908') and (sunlit eq 1)) then scatter_fit      = (Mult_and_add[0]*smoothed_shifted)*0.96 + Mult_and_add[1] + 8
+          
   
-;          if ((order.name eq 'order_Na_D') and (date EQ 'UT200908')) then begin
-;            scatter_fit      = (Mult_and_add[0])*(smoothed_shifted*1.01*(-1.0)) + Mult_and_add[1] + 5000
-;            residual         = (Spec) - scatter_fit
-;            residual_err     = make_array( N_elements(residual), value = stddev(residual[correl_indicies]) )
-;          endif 
           residual         = Spec - scatter_fit
           residual_err     = make_array( N_elements(residual), value = stddev(residual[correl_indicies]) )
   
@@ -1331,7 +1337,7 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
               parinfo[2].value      = median(Possible_line_width[i,*])                                        ; Pin the line's wavelength?
               
             ; Gaussian fit
-              LSF_fitting_ind       = where( abs(wl[plot_WLs] - Ios_airglow[lines_to_fit[j]]) lt 0.2, /NULL)
+              LSF_fitting_ind       = where( abs(wl[plot_WLs] - Ios_airglow[lines_to_fit[j]]) lt 0.25, /NULL)
               tsum_integral_ind     = where( (wl[plot_WLs] - Ios_airglow[lines_to_fit[j]] lt 0.4) and (wl[plot_WLs] - Ios_airglow[lines_to_fit[j]] gt -0.3), /NULL) ;HACKED FIX FOR FAULTY GAUSSIAN ONLY FOR DEMONSTRATION OF 201001
               fa                    = { x:wl[plot_WLs[LSF_fitting_ind]], y:plot_residual_array[LSF_fitting_ind, i], err: err_plot_residual_array[LSF_fitting_ind, i] }
               a                     = mpfit('Gaussian_for_MPFIT', [2., parinfo[1].value, parinfo[2].value], funct=fa, maxiter=50, STATUS = Did_it_work, /Quiet, NPEGGED = NPEGGED, parinfo=parinfo)
@@ -1420,123 +1426,6 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
 
 
 ;  ;part 1 and 12 to do everything APO!
-;
-;
-;  ;==========================================  Combined lightcurve  ======================================================================
-;
-;  ;print, 'Ajello et al. 2008 ratio [7774:8446:9225]', [3.90e-19, 2.15e-19, 6.63e-19] / 2.15e-19
-;  if part eq 2 then begin
-;    restore, Reduced_Dir+'Na1Na2_fit_params.sav'
-;    restore, Reduced_Dir+'O1_fit_params.sav'
-;    restore, Reduced_Dir+'O2_fit_params.sav'
-;    restore, Reduced_Dir+'O3_fit_params.sav'
-;
-;    pos =  [.12,.17,.95,.9]
-;    cgPS_Open, filename = Reduced_Dir+'Combined_lightcurve.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
-;    !P.font=1
-;    device, SET_FONT = 'Helvetica Bold', /TT_FONT
-;
-;    yr = [0, 5.]
-;    cgplot, O2_fit_params.T_P_Shadow, O2_fit_params.Brightness, psym = 15, Ytitle = 'Disk-Averaged Brightness (KR)', xtitle = 'Minutes After Ingress', $
-;      title = 'Io''s Response to Ingress', yr = yr, xr = [range1,range2], /nodata, pos = pos,YTICKFORMAT="(A1)",yticks = 1
-;
-;    cgLoadCT, 33, NColors=8, /reverse
-;    if not ingress then x = findgen(Umbra_ET - PenUmbra_ET) / 60.
-;    if ingress then x = findgen(Umbra_ET - PenUmbra_ET) / 60.
-;    colors = reverse(BytScl(x, MIN=min(x), MAX=2.*max(x)))+128
-;    FOR j=0,n_elements(x)-2 DO BEGIN
-;      xpoly = [x[j],         x[j], x[j+1],       x[j+1],         x[j]]
-;      ypoly = [  0., !Y.CRange[1], !Y.CRange[1], 0., 0.]
-;      cgColorFill, xpoly, ypoly, Color=colors[j]
-;    ENDFOR
-;    if ingress then begin
-;      xpoly = [max(x),     max(x), !X.CRange[1],  !X.CRange[1],  max(x)]
-;      ypoly = [  0., !Y.CRange[1], !Y.CRange[1], 0., 0.]
-;      cgColorFill, xpoly, ypoly, color = 'charcoal', /LINE_FILL, orientation = 45., thick = .1
-;      cgColorFill, xpoly, ypoly, color = 'charcoal', /LINE_FILL, orientation = -45., thick = .1
-;    endif
-;
-;    cgaxis, yaxis = 0, yr = yr, /ystyle                        ; repair the axis damage that the Penumbra did
-;    cgaxis, xaxis = 0, xr = time_range                         ; repair axis damage
-;    cgaxis, xaxis = 1, xr = time_range, xtickformat = '(A1)'   ; repair axis damage
-;
-;
-;    Na1Na2_fit_params[0].Brightness = !Values.F_Nan
-;    O1_fit_params[0].Brightness = !Values.F_Nan
-;    O2_fit_params[0].Brightness = !Values.F_Nan
-;    O3_fit_params[0].Brightness = !Values.F_Nan
-;
-;    READCOL,'D:\DATA\March20_sun_ec.dat',col1,t_post_eclipse,SO2_val_1,SO2_err_1,SO2_val_2,SO2_err_2,SO2_val_3,SO2_err_3,SO2_val_4,SO2_err_4,SO_val,SO_err, STRINGSKIP = '#', /Silent
-;    SO2_val_1in = SO2_val_1[0]
-;    SO2_val_2in = SO2_val_2[0]
-;    SO2_val_3in = SO2_val_3[0]
-;    SO2_val_4in = SO2_val_4[0]
-;    SO_valin = SO_val[0]
-;
-;    SO2_val_1[0] = !Values.F_Nan
-;    SO2_val_1[1] = !Values.F_Nan
-;    SO2_val_2[0] = !Values.F_Nan
-;    SO2_val_2[1] = !Values.F_Nan
-;    SO2_val_3[0] = !Values.F_Nan
-;    SO2_val_3[1] = !Values.F_Nan
-;    SO2_val_4[0] = !Values.F_Nan
-;    SO2_val_4[1] = !Values.F_Nan
-;    SO_val[0] = !Values.F_Nan
-;    SO_val[1] = !Values.F_Nan
-;
-;    cgplot, O2_fit_params.T_P_Shadow, O2_fit_params.Brightness, psym = 16, /overplot, color = 'red', $
-;      ERR_YLOW = O2_fit_params.ERR_Brightness, ERR_YHigh = O2_fit_params.ERR_Brightness, ERR_XLOW = O2_fit_params.exptime/2., ERR_XHigh = O2_fit_params.exptime/2.
-;    cgplot, O2_fit_params.T_P_Shadow, O2_fit_params.Brightness, color = 'red', /overplot
-;
-;    cgplot, O3_fit_params.T_P_Shadow, O3_fit_params.Brightness, psym = 15, /overplot, color = 'red', $
-;      ERR_YLOW = O3_fit_params.ERR_Brightness, ERR_YHigh = O3_fit_params.ERR_Brightness, ERR_XLOW = O3_fit_params.exptime/2., ERR_XHigh = O3_fit_params.exptime/2., ERR_CLIP = 1
-;    cgplot, O3_fit_params.T_P_Shadow, O3_fit_params.Brightness, color = 'red', /overplot
-;
-;    ;cgplot, O1_fit_params.T_P_Shadow, O1_fit_params.Brightness, psym = 16, /overplot, color = 'green', /err_clip, $
-;    ;ERR_YLOW = O1_fit_params.ERR_Brightness, ERR_YHigh = O1_fit_params.ERR_Brightness, ERR_XLOW = O1_fit_params.exptime/2., ERR_XHigh = O1_fit_params.exptime/2.
-;    ;cgplot, O1_fit_params.T_P_Shadow, O1_fit_params.Brightness, color = 'green', /overplot
-;
-;    cgplot, Na1Na2_fit_params.T_P_Shadow, Na1Na2_fit_params.Brightness, psym = 16, /overplot, color = 'orange', $
-;      ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness, ERR_XLOW = Na1Na2_fit_params.exptime/2., ERR_XHigh = Na1Na2_fit_params.exptime/2.
-;    cgplot, Na1Na2_fit_params.T_P_Shadow, Na1Na2_fit_params.Brightness, color = 'orange', /overplot
-;
-;    cgAxis, YAxis=1, YRange=[0, 6.5],title= 'Flux Density of Sulfur- Species [Jy]', COLOR = 'blue', /Save
-;
-;    cgplot, t_post_eclipse, (SO2_val_1 + SO2_val_2)/1000., psym = 17, /overplot, color = 'blue', $
-;      ERR_YLOW = (SO2_err_1 + SO2_err_2)/1000., ERR_YHigh = (SO2_err_1 + SO2_err_2)/1000., ERR_XLOW = [0.,0.,1.7,1.84,5.68], ERR_XHigh = [0.,0.,1.3,1.81,4.9]
-;    cgplot, t_post_eclipse, (SO2_val_1 + SO2_val_2)/1000., color = 'blue', /overplot
-;    cgplot, [0, t_post_eclipse[2]], [(SO2_val_1in + SO2_val_2in)/1000., (SO2_val_1[2] + SO2_val_2[2])/1000.], color = 'blue', LineStyle=2, /overplot
-;
-;    ;cgplot, t_post_eclipse, SO2_val_2/1000., psym = 18, /overplot, color = 'blue', $
-;    ;  ERR_YLOW = SO2_err_1/1000., ERR_YHigh = SO2_err_1/1000., ERR_XLOW = [0.,0.,1.7,1.84,5.68], ERR_XHigh = [0.,0.,1.3,1.81,4.9]
-;    ;cgplot, t_post_eclipse, SO2_val_2/1000., color = 'blue', /overplot
-;
-;    ;cgplot, t_post_eclipse, SO2_val_3/1000., psym = 19, /overplot, color = 'blue', $
-;    ;  ERR_YLOW = SO2_err_1/1000., ERR_YHigh = SO2_err_1/1000., ERR_XLOW = [0.,0.,1.7,1.84,5.68], ERR_XHigh = [0.,0.,1.3,1.81,4.9]
-;    ;cgplot, t_post_eclipse, SO2_val_3/1000., color = 'blue', /overplot
-;
-;    ;cgplot, t_post_eclipse, SO2_val_4/1000., psym = 20, /overplot, color = 'blue', $
-;    ;  ERR_YLOW = SO2_err_1/1000., ERR_YHigh = SO2_err_1/1000., ERR_XLOW = [0.,0.,1.7,1.84,5.68], ERR_XHigh = [0.,0.,1.3,1.81,4.9]
-;    ;cgplot, t_post_eclipse, SO2_val_4/1000., color = 'blue', /overplot
-;
-;    cgplot, t_post_eclipse, (SO2_val_3 + SO2_val_4)/1000., psym = 19, /overplot, color = 'blue', $
-;      ERR_YLOW = (SO2_err_3 + SO2_err_4)/1000., ERR_YHigh = (SO2_err_3 + SO2_err_4)/1000., ERR_XLOW = [0.,0.,1.7,1.84,5.68], ERR_XHigh = [0.,0.,1.3,1.81,4.9]
-;    cgplot, t_post_eclipse, (SO2_val_3 + SO2_val_4)/1000., color = 'blue', /overplot
-;    cgplot, [0, t_post_eclipse[2]], [(SO2_val_3in + SO2_val_4in)/1000., (SO2_val_3[2] + SO2_val_4[2])/1000.], color = 'blue', LineStyle=2, /overplot
-;
-;    cgplot, t_post_eclipse, SO_val/1000., psym = 16, /overplot, color = 'blue', $
-;      ERR_YLOW = SO2_err_1/1000., ERR_YHigh = SO2_err_1/1000., ERR_XLOW = [0.,0.,1.7,1.84,5.68], ERR_XHigh = [0.,0.,1.3,1.81,4.9]
-;    cgplot, t_post_eclipse, SO_val/1000., color = 'blue', /overplot
-;
-;    cgtext, 2.5, !Y.CRange[1]/4., 'Penumbral Eclipse', orientation = 90., color = 'white'
-;
-;    Case date of
-;      'UT180320': cglegend, title = ['[O I] 6300'+cgsymbol('Angstrom'), '[O I] 6364'+cgsymbol('Angstrom'), 'Na D1 + D2', 'SO2 spw1 + spw2', 'SO2 spw5 + spw6', 'SO spw1 + spw3'], Psym = [16, 15, 16, 17,19, 16], charsize = 0.9, $
-;        bg_color = 'white', color = ['red', 'red', 'orange', 'blue', 'blue', 'blue'], Location=[0.67, 0.87];, /Background, /BOX
-;      'UT190812': AL_legend, ['K-D in Umbra 190812'], Psym = 4, /right, charsize = 1, /clear
-;    endcase
-;    cgps_close
-;  endif
 
 
   ;========================================================================================================================================================
@@ -4206,14 +4095,6 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
         cgplot, [130.2, 130.2], [0, 10], color = 'black', LineStyle=2, /overplot
 
 ;        ;------------------ Mikhail's code ---------------------------------------
-;        restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\Na1Na2_fit_params.sav'
-;        restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\O2_fit_params.sav'
-;        restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\O2_Torus_params.sav'
-;
-;        cgplot, O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].T_P_Shadow, O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].Brightness, psym = 15, /overplot, color = 'red', /err_clip, $
-;          ERR_YLOW = O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].ERR_Brightness, ERR_YHigh = O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].ERR_Brightness, ERR_XLOW = O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].exptime/2., ERR_XHigh = O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].exptime/2.
-;        cgplot, O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].T_P_Shadow, O2_fit_params[where(O2_fit_params.T_P_Shadow GT 0)].Brightness, color = 'red', /overplot
-
         restore, 'D:\DATA\LBT\Reduced\Na1Na2_fit_params.sav'
         restore, 'D:\DATA\LBT\Reduced\O2_fit_params.sav'
         restore, 'D:\DATA\LBT\Reduced\O2_Torus_params.sav'
@@ -4224,98 +4105,60 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
         cgplot, Na1Na2_fit_params.T_P_Shadow, Na1Na2_fit_params.Brightness, psym = 14, /overplot, color = 'orange', $
           ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness, ERR_XLOW = Na1Na2_fit_params.exptime/2., ERR_XHigh = Na1Na2_fit_params.exptime/2.
         cgplot, Na1Na2_fit_params.T_P_Shadow, Na1Na2_fit_params.Brightness, color = 'orange', /overplot
+        
+        param_files = ['D:\DATA\Keck\Io_HIRES_Orders\Katherine\Processed\Io_Airglow_params.sav', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav', $
+          'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav']
+        syms = [4, 34, 35, 36, 23]
+        for i = 0, n_elements(param_files)-1 do begin
+          restore, param_files[i]
+          Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
+          Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
+          Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+          Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+          
+          if i eq 2 then begin
+            cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], psym = syms[i], /overplot, color = 'red', /err_clip, $
+              ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
+              ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
+              ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
+            cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], color = 'red', /overplot
 
-;        restore, 'D:\DATA\Keck\Io_HIRES_Orders\Katherine\Processed\Io_Airglow_params.sav'
-;        Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;        Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;        Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;        Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;
-;        cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], psym = 4, /overplot, color = 'red', /err_clip, $
-;          ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-;          ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-;          ERR_XLOW = Io_Airglow_params.exptime/120., ERR_XHigh = Io_Airglow_params.exptime/120., ERR_WIDTH = .005
-;        cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], color = 'red', /overplot
-;
-;        cgplot, (Io_Airglow_params.T_P_Shadow)[1:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[1:*], psym = 4, /overplot, color = 'orange', $
-;          ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[1:*], $
-;          ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[1:*], $
-;          ERR_XLOW = Io_Airglow_params.exptime/120., ERR_XHigh = Io_Airglow_params.exptime/120., ERR_WIDTH = .005
-;        cgplot, (Io_Airglow_params.T_P_Shadow)[1:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[1:*], color = 'orange', /overplot
+            cgplot, Io_Airglow_params.T_P_Shadow[0:2:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2:2], psym = syms[i], /overplot, color = 'orange', $
+              ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2:2], $
+              ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2:2], $
+              ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
+            cgplot, Io_Airglow_params.T_P_Shadow[0:2:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2:2], color = 'orange', /overplot
+          endif
+          if i eq 3 then begin
+            cgplot, (Io_Airglow_params.T_P_Shadow)[0:2], (Io_Airglow_params.Brightness[Ind_6300,*])[0:2], psym = syms[i], /overplot, color = 'red', /err_clip, $
+              ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
+              ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
+              ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
+            cgplot, (Io_Airglow_params.T_P_Shadow[0:2]), (Io_Airglow_params.Brightness[Ind_6300,*])[0:2], color = 'red', /overplot
 
-        restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav'
-        Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-        Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-        Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-        Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+            cgplot, Io_Airglow_params.T_P_Shadow[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], psym = syms[i], /overplot, color = 'orange', $
+              ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2], $
+              ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2], $
+              ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005, err_clip = 1
+            cgplot, Io_Airglow_params.T_P_Shadow[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], color = 'orange', /overplot
+          endif else begin          
+            cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], psym = syms[i], /overplot, color = 'red', /err_clip, $
+              ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
+              ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
+              ERR_XLOW = Io_Airglow_params.exptime/120., ERR_XHigh = Io_Airglow_params.exptime/120., ERR_WIDTH = .005
+            cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], color = 'red', /overplot
+    
+            cgplot, (Io_Airglow_params.T_P_Shadow), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = syms[i], /overplot, color = 'orange', $
+              ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2)), $
+              ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2)), $
+              ERR_XLOW = Io_Airglow_params.exptime/120., ERR_XHigh = Io_Airglow_params.exptime/120., ERR_WIDTH = .005
+            cgplot, (Io_Airglow_params.T_P_Shadow), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
+          endelse
 
-        cgplot, Io_Airglow_params.T_P_Shadow, (Io_Airglow_params.Brightness[Ind_6300,*]) , psym = 34, /overplot, color = 'red', /err_clip, $
-          ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2)), $
-          ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2)) , $
-          ERR_XLOW = Io_Airglow_params.exptime /2., ERR_XHigh = Io_Airglow_params.exptime /2., ERR_WIDTH = .005
-        cgplot, Io_Airglow_params.T_P_Shadow, (Io_Airglow_params.Brightness[Ind_6300,*]) , color = 'red', /overplot
-
-        cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 34, /overplot, color = 'orange', $
-          ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2), $
-          ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2), $
-          ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
-        cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], color = 'orange', /overplot
-
-
-        ;restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav'
-        ;Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-        ;Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-        ;Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-        ;Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-        ;cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], psym = 35, /overplot, color = 'red', /err_clip, $
-        ; ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-        ; ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-        ;ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
-        ;cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_6300,*], color = 'red', /overplot
-
-        ;cgplot, Io_Airglow_params.T_P_Shadow[0:2:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2:2], psym = 35, /overplot, color = 'orange', $
-        ; ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2:2], $
-        ;ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2:2], $
-        ; ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
-        ;cgplot, Io_Airglow_params.T_P_Shadow[0:2:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2:2], color = 'orange', /overplot
-
-        restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav'
-        Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-        Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-        Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-        Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-        cgplot, (Io_Airglow_params.T_P_Shadow)[0:2], (Io_Airglow_params.Brightness[Ind_6300,*])[0:2], psym = 36, /overplot, color = 'red', /err_clip, $
-          ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-          ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-          ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
-        cgplot, (Io_Airglow_params.T_P_Shadow[0:2]), (Io_Airglow_params.Brightness[Ind_6300,*])[0:2], color = 'red', /overplot
-
-        cgplot, Io_Airglow_params.T_P_Shadow[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], psym = 36, /overplot, color = 'orange', $
-          ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2], $
-          ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0:2], $
-          ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005, err_clip = 1
-        cgplot, Io_Airglow_params.T_P_Shadow[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], color = 'orange', /overplot
-
-        restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav'
-        Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-        Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-        Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-        Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-        cgplot, Io_Airglow_params.T_P_Shadow, (Io_Airglow_params.Brightness[Ind_6300,*]), psym = 23, /overplot, color = 'red', /err_clip, $
-          ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-          ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), $
-          ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
-        cgplot, Io_Airglow_params.T_P_Shadow, (Io_Airglow_params.Brightness[Ind_6300,*]), color = 'red', /overplot
-
-        cgplot, Io_Airglow_params.T_P_Shadow, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = 23, /overplot, color = 'orange', $
-          ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2)), $
-          ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2)), $
-          ERR_XLOW = Io_Airglow_params.exptime/2., ERR_XHigh = Io_Airglow_params.exptime/2., ERR_WIDTH = .005
-        cgplot, Io_Airglow_params.T_P_Shadow, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
-
+        endfor
         READCOL, Reduced_Dir + 'March20_sun_ec.dat',col1,t_post_eclipse,SO2_val_1,SO2_err_1,SO2_val_2,SO2_err_2,SO2_val_3,SO2_err_3,SO2_val_4,SO2_err_4,SO_val,SO_err, STRINGSKIP = '#', /Silent
         SO2_val_1in = SO2_val_1[0]
         SO2_val_2in = SO2_val_2[0]
@@ -4345,301 +4188,282 @@ Pro Io_Eclipses_optical, Part=Part, Date=Date, Sunlit=Sunlit
           ERR_YLOW = SO2_err_1/1000., ERR_YHigh = SO2_err_1/1000., ERR_XLOW = [0.,0.,1.5,1.825,5.29], ERR_XHigh = [0.,0.,1.5,1.825,5.29], /ystyle
         cgplot, t_post_eclipse, SO_val/1000., color = 'blue', /overplot, /ystyle
         cgplot, [0, t_post_eclipse[2]], [SO_valin/1000., SO_val[2]/1000.], color = 'blue', LineStyle=2, /overplot, /ystyle
-        ;------------------ end Mikhail's code ---------------------------------------
 
         cgaxis, yaxis = 0, yr = yr, /ystyle                                      ; repair the axis damage that the Penumbra did
         cgaxis, xaxis = 0, xr = time_range, /xstyle                              ; repair axis damage
         cgaxis, xaxis = 1, xr = time_range, xtickformat = '(A1)', /xstyle        ; repair axis damage
       endelse
 
-      ;UT180320': cglegend, title = ['[O I] 6300'+cgsymbol('Angstrom') + ' + 6364'+cgsymbol('Angstrom'), 'Na D!D1!N + D!D2!N', 'SO!D2!N 346.52+346.65Ghz', 'SO!D2!N 332.09+332.50Ghz', 'SO 346.52+344.31Ghz'], Psym = [16, 16, 17, 19, 16], charsize = 1.5, $
-      cglegend, title = ['[O I] 6300'+cgsymbol('Angstrom'), 'Na D!D1!N + D!D2!N', 'SO!D2!N spw1+2+5+6',  'SO spw1+3', 'UT190812','UT190424','UT201001','UT200823','UT200908','UT201017', 'UT180807'], Psym = [16, 16, 19, 16,15,14,34,35,36,23, 4], charsize = 1.2, $
+     cglegend, title = ['[O I] 6300'+cgsymbol('Angstrom'), 'Na D!D1!N + D!D2!N', 'SO!D2!N spw1+2+5+6',  'SO spw1+3', 'UT190812','UT190424','UT201001','UT200823','UT200908','UT201017', 'UT180807'], Psym = [16, 16, 19, 16,15,14,34,35,36,23, 4], charsize = 1.2, $
         bg_color = 'white', color = ['red', 'orange', 'blue', 'blue', 'red','red','red','red','red','red', 'red'], alignment = 1, Location=[1.3, 0.88], /Background, /BOX, vspace = 1.2, length = 0
-      ;'UT190424': cglegend, title = ['[O I] 6300'+cgsymbol('Angstrom'), 'Na D1 + D2'], Psym = [16, 16], charsize = 1.2, $
-      ; bg_color = 'white', color = ['red', 'orange'], Location=[0.6, 0.88], /Background, /BOX
-      ;'UT190812': AL_legend, ['K-D in Umbra 190812'], Psym = 4, /right, charsize = 1.2, /clear
+
       cgps_close
     endfor ;dir_index
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;                     plotting [O I] versus torus latitude                       ;
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\6300_vs_Torus_latitude.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
-;      !P.font=1
-;      device, SET_FONT = 'Helvetica Bold', /TT_FONT
-;      
-;      param_files = [ 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Keck\Io Eclipse HIRES\Katherine\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\LBT\Reduced\O2_fit_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav' ]
-;      
-;      Legend_dates = ['180320', '180807', '190424', '190812', '200823', '200908', '201001','201017']
-;      Plot_symbols = [16, 21, 14, 6, 4, 36, 23, 35]
-;      
-;      cgplot, [0,1], [0,1], /nodata, title = '[O I] Red Lines vs Io''s Latitude in the Torus', $
-;              xtitle = 'Io''s Latitude from the Torus Centrifugal Equator [deg]', xr = [0.,7.], $
-;              ytitle = 'Disk-Averaged 6300 + 6364'+cgsymbol('Angstrom')+' [kR]', yr = [0., 12.], pos = [0.12, 0.16, 0.98, 0.9]
-;                                       
-;      for i = 0, n_elements(Legend_dates)-1 do begin
-;        ; LBT's results are formatted a bit differently than APO and Keck HIRES. the 6364A line is cutoff, so assume a 1 to 3 line ratio
-;          if i eq 2 then begin
-;            cgplot, abs(Torus_params.shift), O2_fit_params.Brightness * 1.333, psym = plot_symbols[i], /overplot, color = 'red', /err_clip, $
-;              ERR_YLOW = O2_fit_params.ERR_Brightness, ERR_YHigh = O2_fit_params.ERR_Brightness, symsize = 1.5
-;            continue
-;          endif  
-;        
-;        ; APO and Keck   
-;          restore, param_files[i]
-;          Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;          Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;          Red_Sum = Io_Airglow_params.brightness[Ind_6300,*] + Io_Airglow_params.brightness[Ind_6364,*]
-;          err_Red_Sum = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_6364,*]^2)
-;          cgplot, abs(Io_Airglow_params.torus_latitude), Red_Sum, psym = plot_symbols[i], /overplot, color = 'red', /err_clip, $
-;            ERR_YLOW = err_Red_Sum, ERR_YHIGH = err_Red_Sum , symsize = 1.5
-;
-;          ;cgplot, abs(Io_Airglow_params.torus_latitude), Io_Airglow_params.brightness[ind_6300,*], psym = plot_symbols[i], /overplot, color = 'red', /err_clip, $
-;          ;  ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*], symsize = 1.5
-;      endfor
-;      
-;      cglegend, title = Legend_dates, Psym = plot_symbols, charsize = 1.2, bg_color = 'white', color = ['red', 'red', 'red', 'red', 'red', 'red', 'red', 'red'], $
-;        alignment = 1, Location=[0.31, 0.6], /Background, /BOX, vspace = 1.2, length = 0, symsize = 1.5
-;    cgps_close
+    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\6300_vs_Torus_latitude.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
+      !P.font=1
+      device, SET_FONT = 'Helvetica Bold', /TT_FONT
+      
+      param_files = [ 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Keck\Io Eclipse HIRES\Katherine\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\LBT\Reduced\O2_fit_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav' ]
+      
+      Legend_dates = ['180320', '180807', '190424', '190812', '200823', '200908', '201001','201017']
+      Plot_symbols = [16, 21, 14, 6, 4, 36, 23, 35]
+      
+      cgplot, [0,1], [0,1], /nodata, title = '[O I] Red Lines vs Io''s Latitude in the Torus', $
+              xtitle = 'Io''s Latitude from the Torus Centrifugal Equator [deg]', xr = [0.,7.], $
+              ytitle = 'Disk-Averaged 6300 + 6364'+cgsymbol('Angstrom')+' [kR]', yr = [0., 12.], pos = [0.12, 0.16, 0.98, 0.9]
+                                       
+      for i = 0, n_elements(Legend_dates)-1 do begin
+        ; LBT's results are formatted a bit differently than APO and Keck HIRES. the 6364A line is cutoff, so assume a 1 to 3 line ratio
+          if i eq 2 then begin
+            cgplot, abs(Torus_params.shift), O2_fit_params.Brightness * 1.333, psym = plot_symbols[i], /overplot, color = 'red', /err_clip, $
+              ERR_YLOW = O2_fit_params.ERR_Brightness, ERR_YHigh = O2_fit_params.ERR_Brightness, symsize = 1.5
+            continue
+          endif  
+        
+        ; APO and Keck   
+          restore, param_files[i]
+          Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
+          Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
+          Red_Sum = Io_Airglow_params.brightness[Ind_6300,*] + Io_Airglow_params.brightness[Ind_6364,*]
+          err_Red_Sum = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_6364,*]^2)
+          cgplot, abs(Io_Airglow_params.torus_latitude), Red_Sum, psym = plot_symbols[i], /overplot, color = 'red', /err_clip, $
+            ERR_YLOW = err_Red_Sum, ERR_YHIGH = err_Red_Sum , symsize = 1.5
+
+          ;cgplot, abs(Io_Airglow_params.torus_latitude), Io_Airglow_params.brightness[ind_6300,*], psym = plot_symbols[i], /overplot, color = 'red', /err_clip, $
+          ;  ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*], symsize = 1.5
+      endfor
+      
+      cglegend, title = Legend_dates, Psym = plot_symbols, charsize = 1.2, bg_color = 'white', color = ['red', 'red', 'red', 'red', 'red', 'red', 'red', 'red'], $
+        alignment = 1, Location=[0.31, 0.6], /Background, /BOX, vspace = 1.2, length = 0, symsize = 1.5
+    cgps_close
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;                     plotting  Na D versus torus latitude                       ;
+    ;                         plotting  Na D versus torus latitude                   ;
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     
-;    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Na_D_vs_Torus_latitude.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
-;      !P.font=1
-;      device, SET_FONT = 'Helvetica Bold', /TT_FONT
-;  
-;      param_files = [ 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Keck\Io Eclipse HIRES\Katherine\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\LBT\Reduced\Na1Na2_fit_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
-;                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav' ]
-;  
-;      Legend_dates = ['180320', '180807', '190424', '190812', '200823', '200908', '201001','201017']
-;      Plot_symbols = [16, 21, 14, 6, 4, 36, 23, 35]
-;  
-;      cgplot, [0,1], [0,1], /nodata, title = 'Sodium Aurora vs Io''s Latitude in the Torus', $
-;        xtitle = 'Io''s Latitude from the Torus Centrifugal Equator [deg]', xr = [0.,7.], $
-;        ytitle = 'Disk-Averaged Na D!D1!N + D!D2!N [kR]', yr = [0., 10.], pos = [0.12, 0.16, 0.98, 0.9]
-;  
-;      for i = 0, n_elements(Legend_dates)-1 do begin
-;        ; LBT's results are formatted a bit differently than APO and Keck HIRES
-;          if i eq 2 then begin
-;            cgplot, abs(Torus_params.shift), Na1Na2_fit_params.Brightness, psym = plot_symbols[i], /overplot, color = 'orange', /err_clip, $
-;              ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness, symsize = 1.5
-;            continue
-;          endif
-;  
-;        ; APO and Keck
-;          restore, param_files[i]
-;          Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;          Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;          D_sum = Io_Airglow_params.brightness[Ind_NaD2,*] + Io_Airglow_params.brightness[Ind_NaD1,*]
-;          err_D_sum = sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2)
-;          cgplot, abs(Io_Airglow_params.torus_latitude), D_sum, psym = plot_symbols[i], /overplot, color = 'orange', /err_clip, $
-;                ERR_YLOW = err_D_sum, ERR_YHIGH = err_D_sum, symsize = 1.5
-;      endfor
-;  
-;      cglegend, title = Legend_dates, Psym = plot_symbols, charsize = 1.2, bg_color = 'white', color = ['orange','orange','orange','orange','orange','orange','orange','orange'], $
-;        alignment = 1, Location=[0.31, 0.6], /Background, /BOX, vspace = 1.2, length = 0, symsize = 1.5
-;    cgps_close
+    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Na_D_vs_Torus_latitude.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
+      !P.font=1
+      device, SET_FONT = 'Helvetica Bold', /TT_FONT
+  
+      param_files = [ 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Keck\Io Eclipse HIRES\Katherine\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\LBT\Reduced\Na1Na2_fit_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT190812\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
+                      'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav' ]
+  
+      Legend_dates = ['180320', '180807', '190424', '190812', '200823', '200908', '201001','201017']
+      Plot_symbols = [16, 21, 14, 6, 4, 36, 23, 35]
+  
+      cgplot, [0,1], [0,1], /nodata, title = 'Sodium Aurora vs Io''s Latitude in the Torus', $
+        xtitle = 'Io''s Latitude from the Torus Centrifugal Equator [deg]', xr = [0.,7.], $
+        ytitle = 'Disk-Averaged Na D!D1!N + D!D2!N [kR]', yr = [0., 10.], pos = [0.12, 0.16, 0.98, 0.9]
+  
+      for i = 0, n_elements(Legend_dates)-1 do begin
+        ; LBT's results are formatted a bit differently than APO and Keck HIRES
+          if i eq 2 then begin
+            cgplot, abs(Torus_params.shift), Na1Na2_fit_params.Brightness, psym = plot_symbols[i], /overplot, color = 'orange', /err_clip, $
+              ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness, symsize = 1.5
+            continue
+          endif
+  
+        ; APO and Keck
+          restore, param_files[i]
+          Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+          Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+          D_sum = Io_Airglow_params.brightness[Ind_NaD2,*] + Io_Airglow_params.brightness[Ind_NaD1,*]
+          err_D_sum = sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2)
+          cgplot, abs(Io_Airglow_params.torus_latitude), D_sum, psym = plot_symbols[i], /overplot, color = 'orange', /err_clip, $
+                ERR_YLOW = err_D_sum, ERR_YHIGH = err_D_sum, symsize = 1.5
+      endfor
+  
+      cglegend, title = Legend_dates, Psym = plot_symbols, charsize = 1.2, bg_color = 'white', color = ['orange','orange','orange','orange','orange','orange','orange','orange'], $
+        alignment = 1, Location=[0.31, 0.6], /Background, /BOX, vspace = 1.2, length = 0, symsize = 1.5
+    cgps_close
 
 stop
 
-;    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;    ;plotting Na versus Torus lattitude
-;    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\NaD_vs_Torus_latitude_Ingress.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
-;    !P.font=1
-;    device, SET_FONT = 'Helvetica Bold', /TT_FONT
-;    yr = [0, 7]
-;    pos = [0.120000,0.170000,0.900000,0.900000]
-;
-;    restore, 'D:\DATA\LBT\Reduced\O2_fit_params.sav'
-;    restore, 'D:\DATA\LBT\Reduced\O2_Torus_params.sav'
-;    restore, 'D:\DATA\LBT\Reduced\Na1Na2_fit_params.sav'
-;    cgplot, abs(Torus_params.shift), O2_fit_params.Brightness, psym = 14, xtitle = 'Latitude from Centrifugal Equator [deg]', $
-;      title = 'Na D!D1!N + D!D2!N'  +' vs Io''s Torus Latitude', yr = yr, xr = [1.5,6.7],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
-;    cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [kR]', COLOR = 'black', /Save, /ystyle
-;    cgplot, abs(Torus_params.shift), Na1Na2_fit_params.Brightness, psym = 16, /overplot, color = 'orange', $
-;      ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness
-;    cgplot,abs(Torus_params.shift), Na1Na2_fit_params.Brightness, color = 'orange', /overplot
-;
-;    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Io_Airglow_params.sav'
-;    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;    Io_Airglow_params.brightness[ind_6300,0] = !Values.F_Nan ;skip penumbral frame
-;    cgplot, abs(Io_Airglow_params.torus_latitude), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = 16, /overplot, color = 'orange', /err_clip, $
-;      ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*]
-;    cgplot, abs(Io_Airglow_params.torus_latitude), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
-;
-;    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav'
-;    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;    cgplot, (abs(Io_Airglow_params.torus_latitude)), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = 21, /overplot, color = 'orange', /err_clip, $
-;      ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*]
-;    cgplot, (abs(Io_Airglow_params.torus_latitude)), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
-;
-;    restore, 'D:\DATA\Keck\Io Eclipse HIRES\Katherine\Reduced\Io_Airglow_params.sav'
-;    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;    Io_Airglow_params.brightness[ind_6300,0] = !Values.F_Nan ;skip penumbral frame
-;    cgplot, (abs(Io_Airglow_params.torus_latitude))[1:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[1:*], psym = 4, /overplot, color = 'orange', /err_clip, $
-;      ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = (Io_Airglow_params.ERR_Brightness[ind_6300,*])[1:*]
-;    cgplot, (abs(Io_Airglow_params.torus_latitude))[1:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[1:*], color = 'orange', /overplot
-;
-;    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav'
-;    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;
-;    cgplot, (abs(Io_Airglow_params.torus_latitude))[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], psym = 36, /overplot, color = 'orange', /err_clip, $
-;      ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2)
-;    cgplot, (abs(Io_Airglow_params.torus_latitude))[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], color = 'orange', /overplot
-;
-;    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav'
-;    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-;    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
-;    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-;    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-;
-;
-;    cgplot, abs(Io_Airglow_params.torus_latitude), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = 23, /overplot, color = 'orange', $
-;      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2)), ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))
-;    cgplot, abs(Io_Airglow_params.torus_latitude), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
-;
-;
-;
-;    cglegend, title = ['190424', '180320', '201001', '180807', '200908', '201017'], Psym = [14, 16, 21, 4, 36, 23], charsize = 1.2, $
-;      bg_color = 'white', color = ['orange', 'orange', 'orange', 'orange', 'orange', 'orange'], alignment = 1, Location=[0.30, 0.88], /Background, /BOX, vspace = 1.2, length = 0
-;    cgps_close
-
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;Plotting Na D in sunlight: currently only plotting 201001
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\NaD_Sunlit.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;plotting Na versus Torus lattitude
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\NaD_vs_Torus_latitude_Ingress.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
     !P.font=1
     device, SET_FONT = 'Helvetica Bold', /TT_FONT
-    yr = [0, 0.16]
+    yr = [0, 7]
     pos = [0.120000,0.170000,0.900000,0.900000]
 
-    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav'
-    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+    restore, 'D:\DATA\LBT\Reduced\O2_fit_params.sav'
+    restore, 'D:\DATA\LBT\Reduced\O2_Torus_params.sav'
+    restore, 'D:\DATA\LBT\Reduced\Na1Na2_fit_params.sav'
+    cgplot, abs(Torus_params.shift), O2_fit_params.Brightness, psym = 14, xtitle = 'Latitude from Centrifugal Equator [deg]', $
+      title = 'Na D!D1!N + D!D2!N'  +' vs Io''s Torus Latitude', yr = yr, xr = [1.5,6.7],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
+    cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [kR]', COLOR = 'black', /Save, /ystyle
+    cgplot, abs(Torus_params.shift), Na1Na2_fit_params.Brightness, psym = 16, /overplot, color = 'orange', $
+      ERR_YLOW = Na1Na2_fit_params.ERR_Brightness, ERR_YHigh = Na1Na2_fit_params.ERR_Brightness
+    cgplot,abs(Torus_params.shift), Na1Na2_fit_params.Brightness, color = 'orange', /overplot
 
-    cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 14, xtitle = 'Time after Egress', $
-      title = 'Na D!D1!N + D!D2!N'  +' Emerging into Sunlight', yr = yr, xr = [0, 120.],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
-    cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [MR]', COLOR = 'black', /Save, /ystyle
-
-    cgplot, Io_Airglow_params.T_P_Shadow[3:*] - 133.32, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., psym = 34, /overplot, color = 'orange', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
-      ERR_XLOW = (Io_Airglow_params.exptime/2.)[3:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[2:*], ERR_WIDTH = .005
-    cgplot, Io_Airglow_params.T_P_Shadow[3:*] - 133.32, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., color = 'orange', /overplot
-
-    cgplot, Io_Airglow_params.T_P_Shadow[0:3] - 133.32, [0,0,0, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3]]/1000., psym = 34, /overplot, color = 'orange', $
-      ERR_YLOW  = [(sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))]/1000., $
-      ERR_YHigh = [(sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))]/1000., $
-      ERR_XLOW = (Io_Airglow_params.exptime/2.)[0:3], ERR_XHigh = (Io_Airglow_params.exptime/2.)[0:3], ERR_WIDTH = .005, /err_clip
-    cgplot, Io_Airglow_params.T_P_Shadow[0:3] - 133.32, [0,0,0, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3]]/1000., color = 'orange', /overplot
+    param_files = ['D:\DATA\Apache Point\Echelle\Io Eclipses\UT180320\Reduced\Io_Airglow_params.sav', $
+                   'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
+                   'D:\DATA\Keck\Io Eclipse HIRES\Katherine\Reduced\Io_Airglow_params.sav', $
+                   'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav', $
+                   'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav']
+    syms = [16, 21, 4, 36, 23]
+    for i = 0, n_elements(param_files)-1 do begin
     
-    
-    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav'
-    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-    
-    cgplot, Io_Airglow_params.T_P_Shadow - 133, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., psym = 34, /overplot, color = 'purple', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_XLOW = (Io_Airglow_params.exptime/2.), ERR_XHigh = (Io_Airglow_params.exptime/2.), ERR_WIDTH = .005
-    cgplot, Io_Airglow_params.T_P_Shadow - 133, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., color = 'purple', /overplot
-    
-    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav'
-    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-    cgplot, Io_Airglow_params.T_P_Shadow - 132.75, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., psym = 34, /overplot, color = 'green', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_XLOW = (Io_Airglow_params.exptime/2.), ERR_XHigh = (Io_Airglow_params.exptime/2.), ERR_WIDTH = .005
-    cgplot, Io_Airglow_params.T_P_Shadow - 132.75, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., color = 'green', /overplot
-    
-    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav'
-    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-    cgplot, Io_Airglow_params.T_P_Shadow - 133.33, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., psym = 34, /overplot, color = 'green', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_XLOW = (Io_Airglow_params.exptime/2.), ERR_XHigh = (Io_Airglow_params.exptime/2.), ERR_WIDTH = .005
-    cgplot, Io_Airglow_params.T_P_Shadow - 132.33, (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., color = 'green', /overplot
+      restore, param_files[i]
+      Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
+      Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
+      Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+      Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+      
+      if i eq 0 then begin
+        Io_Airglow_params.brightness[ind_6300,0] = !Values.F_Nan ;skip penumbral frame
+        cgplot, abs(Io_Airglow_params.torus_latitude), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = syms[i], /overplot, color = 'orange', /err_clip, $
+          ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*]
+        cgplot, abs(Io_Airglow_params.torus_latitude), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
+      endif
+      if i eq 3 then begin
+        cgplot, (abs(Io_Airglow_params.torus_latitude))[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], psym = syms[i], /overplot, color = 'orange', /err_clip, $
+          ERR_YLOW  = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2), ERR_YHigh = sqrt(Io_Airglow_params.ERR_Brightness[Ind_6300,*]^2)
+        cgplot, (abs(Io_Airglow_params.torus_latitude))[0:2], (Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2] + (Io_Airglow_params.Brightness[Ind_NaD2,*])[0:2], color = 'orange', /overplot
+      endif else begin
+        cgplot, (abs(Io_Airglow_params.torus_latitude)), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), psym = syms[i], /overplot, color = 'orange', /err_clip, $
+          ERR_YLOW = Io_Airglow_params.ERR_Brightness[ind_6300,*], ERR_YHigh = Io_Airglow_params.ERR_Brightness[ind_6300,*]
+        cgplot, (abs(Io_Airglow_params.torus_latitude)), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*]), color = 'orange', /overplot
+      endelse
+    endfor
 
 
+    cglegend, title = ['190424', '180320', '201001', '180807', '200908', '201017'], Psym = [14, 16, 21, 4, 36, 23], charsize = 1.2, $
+      bg_color = 'white', color = ['orange', 'orange', 'orange', 'orange', 'orange', 'orange'], alignment = 1, Location=[0.30, 0.88], /Background, /BOX, vspace = 1.2, length = 0
     cgps_close
+
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;Plotting Na D ratios in sunlight: currently only plotting 201001
+    ;Plotting Na D in sunlight: 
+    ; Currently plots a two panel figure with 
+    ;           1. Brightness of Na D2+D1 taken from running part 1 with sunlit = 1, the calculated g-values from part 0 for UT201001
+    ;           2. Ratios of D2/D1 with error propogation (this tends to result in large errors due to the small size of the NaD signal and telluric contamination)
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\NaD_ratios.eps', /ENCAPSULATED, xsize = 6., ysize = 4.
+    cgPS_Open, filename = 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\NaD_Sunlit.eps', /ENCAPSULATED, xsize = 10., ysize = 10.
     !P.font=1
     device, SET_FONT = 'Helvetica Bold', /TT_FONT
-    yr = [0, 0.16]
-    pos = [0.120000,0.170000,0.900000,0.900000]
-
+    yr = [0, 0.18]
+    
+    pos        = cgLayout([1,2], OXMargin=[10,10], OYMargin=[8,5], YGap=4)
+    
+    param_files = [ 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav', $
+                    'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav',$
+                    'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201017\Reduced\Io_Airglow_params.sav']
+    param_times = [ 133.32, 133, 132.33]                     
+    for i = 0, n_elements(param_files)-1 do begin
+      restore, param_files[i]
+      Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+      Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+      
+      if i eq 0 then begin
+      cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 14, $
+        title = 'Na D!D1!N + D!D2!N'  +' Emerging into Sunlight', yr = yr, xr = [0, 100.],XTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos[*,0]
+        
+      cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [MR]', COLOR = 'black', /Save, /ystyle
+      
+      cgplot, Io_Airglow_params.T_P_Shadow[3:*] - (param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., psym = 34, /overplot, color = 'orange', symsize = 1.4,$
+        ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
+        ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
+        ERR_XLOW = (Io_Airglow_params.exptime/2.)[3:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[3:*], ERR_WIDTH = .005
+      cgplot, Io_Airglow_params.T_P_Shadow[3:*] - (param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., color = 'orange', /overplot
+      endif
+      if i eq 1 then begin     
+      cgplot, (Io_Airglow_params.T_P_Shadow - (param_times[i]))[2:*], (Io_Airglow_params.Brightness[Ind_NaD2,*] + Io_Airglow_params.Brightness[Ind_NaD1,*])[2:*]/1000, psym = 34, /overplot, color = 'purple', symsize = 1.4,$
+        ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[2:*]/1000., $
+        ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[2:*]/1000., $
+        ERR_XLOW = (Io_Airglow_params.exptime/2.)[2:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[2:*], ERR_WIDTH = .005
+      cgplot, (Io_Airglow_params.T_P_Shadow - (param_times[i]))[2:*], (Io_Airglow_params.Brightness[Ind_NaD2,*] + Io_Airglow_params.Brightness[Ind_NaD1,*])[2:*]/1000, color = 'purple', /overplot
+      cgplot, (Io_Airglow_params.T_P_Shadow)[0]-(param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*] + Io_Airglow_params.Brightness[Ind_NaD1,*])[0]/1000,  psym = 34, /overplot, color = 'purple', symsize = 1.4,$
+        ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0]/1000., $
+        ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[0]/1000., $
+        ERR_XLOW = (Io_Airglow_params.exptime/2.)[0], ERR_XHigh = (Io_Airglow_params.exptime/2.)[0], ERR_WIDTH = .005
+      cgplot, (Io_Airglow_params.T_P_Shadow)[0:2:2]-(param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*] + Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2:2]/1000,  color = 'purple', /overplot
+      endif
+      if i eq 2 then begin
+      cgplot, Io_Airglow_params.T_P_Shadow[2:*] - (param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[2:*]/1000., psym = 34, /overplot, color = 'red', symsize = 1.4,$
+        ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[2:*]/1000., $
+        ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[2:*]/1000., $
+        ERR_XLOW = (Io_Airglow_params.exptime/2.)[2:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[2:*], ERR_WIDTH = .005
+      cgplot, Io_Airglow_params.T_P_Shadow[2:*] - (param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[2:*]/1000., color = 'red', /overplot
+      endif
+    endfor  
+    cgAxis, YAxis=1, YRange=[0, 0.18], title= 'Na-D Brightness [MR] (1.1e12 column density)', COLOR = 'blue', /Save, /ystyle
+    
+    ;g values are calculated via the 
     restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT201001\Reduced\Io_Airglow_params.sav'
-    Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
-    Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
     Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
     Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+    cgplot, (Io_Airglow_params.T_P_Shadow-133.32)[1:*], [0.0407, 0.0436, 0.0471, 0.0579, 0.0740, 0.0968, 0.1442]*(10^12)/(10^12)*1.1,  psym = 34, /overplot, color = 'blue', symsize = 1.4
 
-    cgplot, Io_Airglow_params.T_P_Shadow, Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 14, xtitle = 'Ratio of Lines D2/D1', $
-      title = 'Na D!D1!N + D!D2!N'  +' Emerging into Sunlight', yr = yr, xr = [1, 2],YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos
-    cgAxis, YAxis=0, YRange=yr, title= 'Disk-Averaged Brightness [MR]', COLOR = 'black', /Save, /ystyle
+    ;create legend
+    cglegend, title = ['UT201001', 'UT200908', 'UT201017', 'Estimated Values from Calculated Scattering Rates'], Psym = [34,34,34,34], charsize = 1.4, $
+      bg_color = 'white', color = ['orange', 'purple', 'red', 'blue'], alignment = 1, Location=[0.87, 0.65], /Background, /BOX, vspace = 1.2, length = 0
 
-    cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[3:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., psym = 34, /overplot, color = 'orange', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))[3:*]/1000., $
-      ERR_WIDTH = .005
-    cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[3:*], (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])[3:*]/1000., color = 'orange', /overplot
-
-    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200908\Reduced\Io_Airglow_params.sav'
-    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-    cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., psym = 34, /overplot, color = 'orange', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_WIDTH = .005
-    cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., color = 'orange', /overplot
-
-    restore, 'D:\DATA\Apache Point\Echelle\Io Eclipses\UT200823\Reduced\Io_Airglow_params.sav'
-    Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
-    Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
-
-    cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., psym = 34, /overplot, color = 'orange', $
-      ERR_YLOW  = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_YHigh = (sqrt(Io_Airglow_params.ERR_Brightness[Ind_NaD1,*]^2 + Io_Airglow_params.ERR_Brightness[Ind_NaD2,*]^2))/1000., $
-      ERR_WIDTH = .005
-    cgplot, (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*]), (Io_Airglow_params.Brightness[Ind_NaD1,*] + Io_Airglow_params.Brightness[Ind_NaD2,*])/1000., color = 'orange', /overplot
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;This is the second frame in the plot created previously: contains Na D2/D1 ratios
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                    
+    for i = 0, n_elements(param_files)-1 do begin
+      restore, param_files[i]
+      Ind_6300 = where(Io_Airglow_params.line eq 6300.3042)
+      Ind_6364 = where(Io_Airglow_params.line eq 6363.7759)
+      Ind_NaD1 = where(Io_Airglow_params.line eq 5895.9243)
+      Ind_NaD2 = where(Io_Airglow_params.line eq 5889.9512)
+      
+      err_prop = (Io_Airglow_params.Brightness[Ind_NaD1,*]/Io_Airglow_params.Brightness[Ind_NaD2,*])*sqrt(((Io_Airglow_params.ERR_Brightness[Ind_NaD1,*])/(Io_Airglow_params.Brightness[Ind_NaD1,*]))^2 + ((Io_Airglow_params.ERR_Brightness[Ind_NaD2,*])/(Io_Airglow_params.Brightness[Ind_NaD2,*]))^2)
+      if i eq 0 then begin
+        cgplot, Io_Airglow_params.T_P_Shadow -133.32, Io_Airglow_params.Brightness[Ind_NaD1,*] / Io_Airglow_params.Brightness[Ind_NaD2,*], psym = 14, xtitle = 'Time Post Umbra [min]', $
+          title = 'Na D!D2!N / D!D1!N'  +' Emerging into Sunlight', yr = yr,YTICKFORMAT="(A1)",yticks = 1, /nodata, pos = pos[*,1], /noerase, /err_clip
+        cgAxis, YAxis=0, YRange=[1,2], title= 'Ratio of Na-D2 / Na-D1', COLOR = 'black', /Save, /ystyle
+        
+        cgplot, [(Io_Airglow_params.T_P_Shadow)[3:*], (Io_Airglow_params.T_P_Shadow)[3:*]]-(param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[3:*],  psym = 34, /overplot, color = 'orange', symsize = 1.4, /err_clip,$
+          ERR_YLOW  = err_prop[3:*], $
+          ERR_YHigh = err_prop[3:*], $
+          ERR_WIDTH = .005
+        cgplot, (Io_Airglow_params.T_P_Shadow)[3:*]-(param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[3:*],  color = 'orange', /overplot
+      endif 
+      if i eq 1 then begin
+        cgplot, (Io_Airglow_params.T_P_Shadow - (param_times[i]))[2:*], (Io_Airglow_params.Brightness[Ind_NaD2,*]/Io_Airglow_params.Brightness[Ind_NaD1,*])[2:*], psym = 34, /overplot, color = 'purple', /err_clip, symsize = 1.4,$
+          ERR_YLOW  = err_prop[2:*], $
+          ERR_YHigh = err_prop[2:*], $
+          ERR_XLOW = (Io_Airglow_params.exptime/2.)[2:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[2:*], ERR_WIDTH = .005
+        cgplot, (Io_Airglow_params.T_P_Shadow - (param_times[i]))[2:*], (Io_Airglow_params.Brightness[Ind_NaD2,*]/Io_Airglow_params.Brightness[Ind_NaD1,*])[2:*], color = 'purple', /overplot
+        cgplot, (Io_Airglow_params.T_P_Shadow)[0]-(param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[0],  psym = 34, /overplot, color = 'purple', /err_clip, symsize = 1.4,$
+          ERR_YLOW  = err_prop[0], $
+          ERR_YHigh = err_prop[0], $
+          ERR_XLOW = (Io_Airglow_params.exptime/2.)[0], ERR_XHigh = (Io_Airglow_params.exptime/2.)[0], ERR_WIDTH = .005
+        cgplot, (Io_Airglow_params.T_P_Shadow)[0:2:2]-(param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*] / Io_Airglow_params.Brightness[Ind_NaD1,*])[0:2:2],  color = 'purple', /overplot
+      endif 
+      if i eq 2 then begin
+        cgplot, (Io_Airglow_params.T_P_Shadow)[2:*] - (param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*]/Io_Airglow_params.Brightness[Ind_NaD1,*])[2:*], psym = 34, /overplot, color = 'red', /err_clip, symsize = 1.4, $
+          ERR_YLOW  = err_prop[2:*], $
+          ERR_YHigh = err_prop[2:*], $
+          ERR_XLOW = (Io_Airglow_params.exptime/2.)[2:*], ERR_XHigh = (Io_Airglow_params.exptime/2.)[2:*], ERR_WIDTH = .005
+        cgplot, (Io_Airglow_params.T_P_Shadow)[2:*] - (param_times[i]), (Io_Airglow_params.Brightness[Ind_NaD2,*]/Io_Airglow_params.Brightness[Ind_NaD1,*])[2:*], color = 'red', /overplot
+      endif
+    endfor
+    
+    ;recreating right y axis
+    cgAxis, YAxis=1, YRange=[1, 2], COLOR = 'black', /Save, /ystyle, YTICKFORMAT="(A1)"  
 
    cgps_close
 
